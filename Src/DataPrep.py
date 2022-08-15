@@ -34,10 +34,19 @@ top500 = df_sold.iloc[:500]
 
 pivot = pd.pivot_table(top500, index= ["prod_name"], values='sold_count', aggfunc=np.sum)
 pivot = pivot.reset_index()
-top500.sort_values("prod_name", ascending=False)
+pivot = pivot.sort_values("sold_count", ascending=False)
 
-ax = sns.barplot(x="prod_name", y="sold_count", data=top500.iloc[0:29])
+ax = sns.barplot(x="prod_name", y="sold_count", data=pivot.iloc[0:29])
 plt.setp(ax.get_xticklabels(), rotation=90)
 plt.show()
 # We could display in % sold instead of total
 
+# Popular color?
+
+pivot = pd.pivot_table(top500, index= ["colour_group_name"], values='sold_count', aggfunc=np.sum)
+pivot = pivot.reset_index()
+pivot = pivot.sort_values("sold_count", ascending=False)
+
+ax = sns.barplot(x="colour_group_name", y="sold_count", data=pivot.iloc[0:29])
+plt.setp(ax.get_xticklabels(), rotation=90)
+plt.show()
