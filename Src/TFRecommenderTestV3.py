@@ -6,6 +6,7 @@ import numpy as np
 import pprint
 from typing import Dict, Text
 
+#CUDA_VISIBLE_DEVICES=""
 
 ratings = tfds.load("movielens/100k-ratings", split = "train")
 movies = tfds.load("movielens/100k-movies", split="train")
@@ -31,6 +32,8 @@ user_ids = ratings.batch(1_000_000).map(lambda x: x['user_id'])
 unique_movie_titles = np.unique(np.concatenate(list(movie_titles)))
 
 unique_user_id = np.unique(np.concatenate(list(user_ids)))
+
+embedding_dimension = 64
 
 ## Se unique movies:
 unique_movie_titles[:4]

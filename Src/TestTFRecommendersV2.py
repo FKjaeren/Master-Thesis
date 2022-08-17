@@ -4,9 +4,9 @@ import tensorflow_datasets as tfds
 import tensorflow_recommenders as tfrs
 
 # Ratings data.
-ratings = tfds.load("movie_lens/100k-ratings", split="train", )
+ratings = tfds.load("movielens/100k-ratings", split="train", )
 # Features of all the available movies.
-movies = tfds.load("movie_lens/100k-movies", split="train")
+movies = tfds.load("movielens/100k-movies", split="train")
 
 
 ratings = ratings.map(lambda x: {"movie_title": x["movie_title"],"user_id": x["user_id"],})
@@ -52,19 +52,26 @@ class TwoTowerMovielensModel(tfrs.Model):
             candidates=movies.batch(eval_batch_size).map(self.movie_model)
         )
     )
-    def compute_loss(self, features, training=False) -> tf.Tensor:
-        # The `compute_loss` method determines how loss is computed.
+  def compute_loss(self, features, training=False) -> tf.Tensor:
+      # The `compute_loss` method determines how loss is computed.
     
-        # Compute user and item embeddings.
-        user_embeddings = self.user_model(features["user_id"])
-        movie_embeddings = self.movie_model(features["movie_title"])
+      # Compute user and item embeddings.
+      user_embeddings = self.user_model(features["user_id"])
+      movie_embeddings = self.movie_model(features["movie_title"])
     
-        # Pass them into the task to get the resulting loss. The lower the loss is, the
-        # better the model is at telling apart true watches from watches that did
-        # not happen in the training data.
-        return self.task(user_embeddings, movie_embeddings)
+      # Pass them into the task to get the resulting loss. The lower the loss is, the
+      # better the model is at telling apart true watches from watches that did
+      # not happen in the training data.
+      return self.task(user_embeddings, movie_embeddings)
 
 model = TwoTowerMovielensModel()
 model.compile(optimizer=tf.keras.optimizers.Adagrad(0.1))
  
 model.fit(ratings.batch(4096), verbose=False)
+
+index = tfrs.layers.ann.BruteForce(model.user_model)
+index.index(movies.batch(100).map(model.movie_model), movies)
+ 
+# Get recommendations.
+_, titles = index(tf.constant(["42"]))
+print(f"Recommendations for user 42: {titles[0, :3]}")
