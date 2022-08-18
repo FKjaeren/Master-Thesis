@@ -14,7 +14,7 @@ test_article = 806388002
 
 
 # Create a new model instance
-model = SimpleRecommender(customers_sub, articles_sub, 62)
+model = SimpleRecommender(customers_sub, articles_sub, 15)
 
 # Load the previously saved weights
 latest = tf.train.latest_checkpoint('Models/')
