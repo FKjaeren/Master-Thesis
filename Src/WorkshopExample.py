@@ -1,24 +1,29 @@
-from decimal import DecimalTuple
-from pickletools import optimize
-from pkgutil import get_data
-from random import random
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
 transactions_df = pd.read_csv('Data/Raw/transactions_train.csv')
-splitrange = round(0.8*len(transactions_df['customer_id']))
+splitrange = round(0.75*len(transactions_df['customer_id']))
+splitrange2 = round(0.95*len(transactions_df['customer_id']))
 
 train = transactions_df.iloc[:splitrange]
-valid = transactions_df.iloc[splitrange+1:]
+valid = transactions_df.iloc[splitrange+1:splitrange2]
+test = transactions_df.iloc[splitrange2:]
+
 
 train_sub = train[['customer_id','article_id']]
 valid_sub = valid[['customer_id','article_id']]
+test_sub = test[['customer_id','article_id']]
+
+test_sub.to_csv('Data/Preprocessed/TestData.csv',index=False)
+
 articles = pd.read_csv('Data/Raw/articles.csv')
 customers = pd.read_csv('Data/Raw/customers.csv')
 articles_sub = articles[['article_id']].values.flatten()
 customers_sub = customers[['customer_id']].values.flatten()
 
+
+"""
 articles_tensor = tf.constant(articles_sub, dtype=tf.int32)
 
 article_table = tf.lookup.StaticHashTable(
@@ -31,6 +36,8 @@ embedding_dim = 32
 Customer_embed = tf.keras.layers.Embedding(len(customers_sub),embedding_dim)
 
 articles_embed = tf.keras.layers.Embedding(len(articles_sub),embedding_dim)
+
+"""
 
 class SimpleRecommender(tf.keras.Model):
     def __init__(self, customers_sub, articles_sub, embedding_dim):
@@ -70,7 +77,7 @@ class SimpleRecommender(tf.keras.Model):
         top_ids = tf.gather(self.articles, top_indeces)
         return top_ids, top_scores
 
-model = SimpleRecommender(customers_sub, articles_sub, 62)
+#model = SimpleRecommender(customers_sub, articles_sub, 62)
 
 """
 model([tf.constant([['00000dbacae5abe5e23885899a1fa44253a17956c6d1c3d25f88aa139fdfc657'],['00047be328d1d284ba9270dd28bf65c018485435fa12119be612f90af8d4b719']])
@@ -79,6 +86,7 @@ model([tf.constant([['00000dbacae5abe5e23885899a1fa44253a17956c6d1c3d25f88aa139f
 
 ### Create dataset
 
+"""
 dummy_customer_tensor = tf.constant(train_sub[['customer_id']].values, dtype=tf.string)
 article_tensor = tf.constant(train_sub[['article_id']].values,dtype=tf.int32)
 
@@ -93,6 +101,7 @@ random_negatives_indexes  = tf.random.uniform((7,),minval = 0, maxval = len(arti
 
 #tf.gather(articles_sub, random_negatives_indexes)
 
+"""
 class Mapper():
     def __init__(self, possible_articles, num_negative_articles):
         self.num_possible_articles = len(possible_articles)
@@ -105,6 +114,7 @@ class Mapper():
         candidates = tf.concat([article, negative_products], axis = 0)
         return (customer, candidates), self.y
 
+"""
 dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor)).map(Mapper(articles_sub, 10))
 
 for (user, candidates), y in dataset:
@@ -112,7 +122,7 @@ for (user, candidates), y in dataset:
     print(candidates)
     print(y)
     break
-
+"""
 def get_dataset(df, articles, number_negative_articles):
     dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
     article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
@@ -137,10 +147,6 @@ model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True),
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
 model.fit(get_dataset(train_sub, articles_sub, 100), validation_data = get_dataset(valid_sub, articles_sub,100), epochs =5)
-
-test_article = 
-
-print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
 
 # Path
 path = 'Models/BaselineModelIteration1'
