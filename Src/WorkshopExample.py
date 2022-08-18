@@ -76,6 +76,16 @@ class SimpleRecommender(tf.keras.Model):
         top_scores, top_indeces = tf.math.top_k(scores, k = 100)
         top_ids = tf.gather(self.articles, top_indeces)
         return top_ids, top_scores
+    def Customer_recommendation(self, customer, k):
+        customer_x = self.customer_table(customer)
+        customer_embeddings = tf.expand_dims(self.customer_embed(customer_x),0)
+        all_articles_embeddings = tf.expand_dims(self.articles_embed.embeddings,0)
+
+        scores = tf.reshape(self.dot([customer_embeddings, all_articles_embeddings]),[-1])
+
+        top_scores, top_indeces = tf.math.in_top_k(scores, k)
+        top_ids = tf.gather(self.articles, top_indeces)
+        return top_ids, top_scores
 
 #model = SimpleRecommender(customers_sub, articles_sub, 62)
 

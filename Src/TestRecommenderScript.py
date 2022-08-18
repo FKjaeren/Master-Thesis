@@ -22,4 +22,4 @@ model.load_weights(latest)
 
 print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
 
-print("Recs for item {}: {}".format(test_article, model.call(tf.constant(test_article, dtype=tf.int32))))
+print("Recs for item {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))
