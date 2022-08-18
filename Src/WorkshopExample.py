@@ -69,7 +69,6 @@ class SimpleRecommender(tf.keras.Model):
     def call_item_item(self, article):
         article_x = self.article_table.lookup(article)
         article_embeddings = tf.expand_dims(self.articles_embed(article_x),0)
-
         all_articles_embeddings = tf.expand_dims(self.articles_embed.embeddings,0)
         scores = tf.reshape(self.dot([article_embeddings, all_articles_embeddings]), [-1])
 
@@ -80,10 +79,9 @@ class SimpleRecommender(tf.keras.Model):
         customer_x = self.customer_table.lookup(customer)
         customer_embeddings = tf.expand_dims(self.customer_embed(customer_x),0)
         all_articles_embeddings = tf.expand_dims(self.articles_embed.embeddings,0)
+        scores = tf.reshape(self.dot([customer_embeddings, all_articles_embeddings]), [-1])
 
-        scores = tf.reshape(self.dot([customer_embeddings, all_articles_embeddings]),[-1])
-
-        top_scores, top_indeces = tf.math.in_top_k(scores, k)
+        top_scores, top_indeces = tf.math.top_k(scores, k = k)
         top_ids = tf.gather(self.articles, top_indeces)
         return top_ids, top_scores
 
