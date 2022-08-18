@@ -17,8 +17,14 @@ test_article = 806388002
 model = SimpleRecommender(customers_sub, articles_sub, 15)
 
 # Load the previously saved weights
+
+
 latest = tf.train.latest_checkpoint('Models/')
 model.load_weights(latest)
+
+## Load model forsøg 2 
+#path = 'Models/BaselineModelIteration2'
+# model = tf.saved_model.load(path)
 
 print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
 

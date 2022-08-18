@@ -157,7 +157,11 @@ model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True),
 model.fit(get_dataset(train_sub, articles_sub, 100), validation_data = get_dataset(valid_sub, articles_sub,100), epochs =5)
 
 # Path
-path = 'Models/BaselineModelIteration1'
+path = 'Models/BaselineModelIteration2'
 
 # save
 model.save_weights(path)
+
+#Forsøg 2 på at save
+
+tf.saved_model.save(model, path)
