@@ -19,7 +19,7 @@ sold_count = df_t['article_id'].value_counts()
 sold_count=sold_count.reset_index()
 sold_count.rename(columns = {"article_id":"sold_count","index":"article_id"}, inplace=True)
 
-# create a column with articles and sold count
+# create a dataframe with articles and sold count
 df_sold = df_a.merge(sold_count, on= 'article_id', how='left')
 df_sold = df_sold.sort_values(by='sold_count', ascending=False)
 # Maybe we need to drop articles not sold in the trainin period. But we could also keep to make more sale overall with recommendations.
@@ -101,6 +101,4 @@ plt.show()
 
 
 c_df = pd.merge(df_t, df_c.drop("postal_code", axis=1), on='customer_id', how='inner')
-labels = ['teen' , 'young' , 'middle-aged' , 'senior', 'old']
-#['16-20', '20-30','30-50','50-70', '70+']
-c_df['age_groups'] = pd.cut(c_df['age'], bins=[16, 20, 30, 50, 70,99], labels=labels)
+c_df['age_groups'] = pd.cut(c_df['age'], bins=[16, 20, 30, 50, 70,99], labels = ['teen' , 'young' , 'middle-aged' , 'senior', 'old'])
