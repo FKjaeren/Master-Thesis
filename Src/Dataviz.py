@@ -7,9 +7,9 @@ import seaborn as sns
 data_path = 'Data/Preprocessed/'
 
 
-df_a = pd.read_csv(data_path+'df_a.csv')
-df_c = pd.read_csv(data_path+'df_c.csv')
-df_t = pd.read_csv(data_path+'df_t.csv')
+df_a = pd.read_csv(data_path+'df_a.csv', index_col=0)
+df_c = pd.read_csv(data_path+'df_c.csv', index_col=0)
+df_t = pd.read_csv(data_path+'df_t.csv', index_col=0)
 
 
 # Start exploration of data
