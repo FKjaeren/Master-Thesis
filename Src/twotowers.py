@@ -1,4 +1,4 @@
-from turtle import pos
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -11,7 +11,7 @@ import tensorflow as tf
 import tensorflow_recommenders as tfrs
 
 transactions_df = pd.read_csv('Data/Raw/transactions_train.csv')
-transactions_df = transactions_df[transactions_df['t_dat'] >='2020-08-01']
+transactions_df = transactions_df[transactions_df['t_dat'] >='2020-09-01']
 
 
 
@@ -24,6 +24,7 @@ transactions_df['article_id'] = transactions_df['article_id'].astype(str)
 
 #articles_sub = articles[['article_id']].values.flatten()
 #customers_sub = customers[['customer_id']].values.flatten()
+
 
 
 u_customer = customers.customer_id.unique()
@@ -95,12 +96,33 @@ print(train_ds.shape())
 train_ds_v2=tf.convert_to_tensor(train[['customer_id','article_id']])
 dataVar_tensor = tf.constant(train[['customer_id','article_id']], shape=train[['customer_id','article_id']].shape)
 test_ds = tf.data.Dataset.from_tensor_slices(dict(test[['customer_id','article_id']]))
+test_ds_v2=tf.convert_to_tensor(train[['customer_id','article_id']])
+
+dataVar_tensor = tf.constant(train[['customer_id','article_id']], shape=train[['customer_id','article_id']].shape)
+dataset = tf.data.Dataset.from_tensor_slices((dataVar_tensor))
+dataset = dataset.batch(1000)
+
 num_epochs = 3
 
-model.fit(train_ds_v2, epochs=num_epochs)
+model.fit(dataset, epochs=num_epochs)
+
+dataVar_tensor2 = tf.constant(test[['customer_id','article_id']], shape=test[['customer_id','article_id']].shape)
+dataset2 = tf.data.Dataset.from_tensor_slices((dataVar_tensor2))
+dataset2 = dataset2.batch(1000)
 
 
-model.evaluate(test_ds, return_dict=True)
+model.evaluate(dataset2, return_dict=True)
+
+# Create a model that takes in raw query features, and
+index = tfrs.layers.factorized_top_k.BruteForce(model.customer_model)
+# recommends movies out of the entire movies dataset.
+index.index_from_dataset(
+  tf.data.Dataset.zip((articles.batch(100), articles.batch(100).map(model.article_model)))
+)
+
+# Get recommendations.
+_, titles = index(tf.constant(["42"]))
+print(f"Recommendations for customer 42: {titles[0, :12]}")
 
 
 scann = tfrs.layers.factorized_top_k.ScaNN(model.customer_model, k=5)
