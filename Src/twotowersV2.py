@@ -14,8 +14,7 @@ data_path = 'Data/Raw/'
 
 articles_df = pd.read_csv(data_path+'articles.csv')
 customer_df = pd.read_csv(data_path+'customers.csv')
-transactions_df = pd.read_csv(data_path+'transactions_train.csv')
-transactions_df = transactions_df[transactions_df['t_dat'] >='2020-08-01']
+transactions_df = pd.read_csv('Data/Preprocessed/transactions_df_subset.csv')
 
 
 # Preprocess customer dataframe
@@ -72,8 +71,8 @@ customers_sub = customer_df[['customer_id']].values.flatten()
 u_customer = customer_df.customer_id.unique()
 u_article = articles_df.article_id.astype(str).unique()
 
-CUDA_VISIBLE_DEVICES=""
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#CUDA_VISIBLE_DEVICES=""
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # we create a tensor shape we can pass to the model for all articles
 article_ds = tf.data.Dataset.from_tensor_slices(dict(articles_df[['article_id']]))
 articles = article_ds.map(lambda x: x['article_id'])
@@ -109,6 +108,8 @@ class RetrievalModel(tfrs.Model):
 
   def compute_loss(self, features: Dict[Text, tf.Tensor], training=False) -> tf.Tensor:
     customer_id, data = tuple(zip(*features))
+    customer_id = tf.data.Dataset.from_tensor_slices(customer_id)
+    data = tf.data.Dataset.from_tensor_slices(data)
     #self.num_features = num_features
     #print('features object looks like: ', features[:,0])
     # We pick out the customer features and pass them into the customer model.
@@ -122,9 +123,6 @@ class RetrievalModel(tfrs.Model):
     # The task computes the loss and the metrics.
 
     return self.task(customer_embeddings, positive_article_embeddings)#, compute_metrics=not training
-
-
-
 
 
 # wE need to create tensor 
@@ -164,9 +162,9 @@ def get_dataset(df):
     dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
     #dataset = dataset.map(Mapper(articles, number_negative_articles)) 
     #dataset = dataset.batch(1024)
-    return dataset 
+    return dataset, dummy_customer_tensor, article_tensor
 
-dataset = get_dataset(train)
+dataset, customer_tensor, article_tensor = get_dataset(train)
 
 for customer_id, data in dataset.take(1):  # only take first element of dataset
     customer_id = customer_id.numpy()
@@ -174,8 +172,9 @@ for customer_id, data in dataset.take(1):  # only take first element of dataset
 
 model.fit(dataset, epochs=num_epochs)
 
+test_dataset = get_dataset(test)
 
-model.evaluate(test_ds, return_dict=True)
+model.evaluate(test_dataset, return_dict=True)
 
 
 scann = tfrs.layers.factorized_top_k.ScaNN(model.customer_model, k=5)
