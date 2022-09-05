@@ -70,7 +70,7 @@ customers_sub = customer_df[['customer_id']].values.flatten()
 
 
 u_customer = customer_df.customer_id.unique()
-u_article = articles_df.article_id.unique()
+u_article = articles_df.article_id.astype(str).unique()
 
 CUDA_VISIBLE_DEVICES=""
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -128,18 +128,18 @@ class RetrievalModel(tfrs.Model):
 
 
 # wE need to create tensor 
-train_ds = tf.data.Dataset.from_tensor_slices(dict(train[['customer_id','article_id']]))
+#train_ds = tf.data.Dataset.from_tensor_slices(dict(train[['customer_id','article_id']]))
 #print(train_ds.shape())
 #train_ds_v2=tf.convert_to_tensor(train[['customer_id','article_id']])
-dataVar_tensor = tf.constant(train[['customer_id','article_id']], shape=train[['customer_id','article_id']].shape)
-dataset = tf.data.Dataset.from_tensor_slices((dataVar_tensor))
-dataset = dataset.batch(1000)
-test_ds = tf.data.Dataset.from_tensor_slices(dict(test[['customer_id','article_id']]))
+#dataVar_tensor = tf.constant(train[['customer_id','article_id']], shape=train[['customer_id','article_id']].shape)
+#dataset = tf.data.Dataset.from_tensor_slices((dataVar_tensor))
+#dataset = dataset.batch(1000)
+#test_ds = tf.data.Dataset.from_tensor_slices(dict(test[['customer_id','article_id']]))
 num_epochs = 3
 
 features = train.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1).columns
 feature_data = train.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1)
-num_features = len(features)+1
+num_features = int(len(features)+1)
 
 model = RetrievalModel(num_features)
 model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=0.1), loss='None')
