@@ -63,13 +63,13 @@ class RetrievalModel(tfrs.Model):
     )
 
   def compute_loss(self, features: Dict[Text, tf.Tensor], training=False) -> tf.Tensor:
-    print('features object looks like: ', features["customer_id"])
+    print('features object looks like: ', features[:,0])
     # We pick out the customer features and pass them into the customer model.
-    customer_embeddings = self.customer_model(features["customer_id"])
+    customer_embeddings = self.customer_model(features[:,0])
     print('customer_embedding looks like: ', customer_embeddings)
     # And pick out the article features and pass them into the article model,
     # getting embeddings back.
-    positive_article_embeddings = self.article_model(features["article_id"])
+    positive_article_embeddings = self.article_model(features[:,1])
     print('postitive_article_embedding looks like: ', positive_article_embeddings)
 
     # The task computes the loss and the metrics.
