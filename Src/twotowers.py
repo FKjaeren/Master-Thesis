@@ -1,3 +1,4 @@
+from turtle import pos
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -62,11 +63,14 @@ class RetrievalModel(tfrs.Model):
     )
 
   def compute_loss(self, features: Dict[Text, tf.Tensor], training=False) -> tf.Tensor:
+    print('features object looks like: ', features["customer_id"])
     # We pick out the customer features and pass them into the customer model.
     customer_embeddings = self.customer_model(features["customer_id"])
+    print('customer_embedding looks like: ', customer_embeddings)
     # And pick out the article features and pass them into the article model,
     # getting embeddings back.
     positive_article_embeddings = self.article_model(features["article_id"])
+    print('postitive_article_embedding looks like: ', positive_article_embeddings)
 
     # The task computes the loss and the metrics.
 
@@ -87,10 +91,13 @@ model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=0.1))
 
 # wE need to create tensor 
 train_ds = tf.data.Dataset.from_tensor_slices(dict(train[['customer_id','article_id']]))
+print(train_ds.shape())
+train_ds_v2=tf.convert_to_tensor(train[['customer_id','article_id']])
+dataVar_tensor = tf.constant(train[['customer_id','article_id']], shape=train[['customer_id','article_id']].shape)
 test_ds = tf.data.Dataset.from_tensor_slices(dict(test[['customer_id','article_id']]))
 num_epochs = 3
 
-model.fit(train_ds, epochs=num_epochs)
+model.fit(train_ds_v2, epochs=num_epochs)
 
 
 model.evaluate(test_ds, return_dict=True)
