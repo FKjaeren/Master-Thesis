@@ -16,7 +16,7 @@ data_path = 'Data/Raw/'
 articles_df = pd.read_csv(data_path+'articles.csv')
 customer_df = pd.read_csv(data_path+'customers.csv')
 transactions_df = pd.read_csv(data_path+'transactions_train.csv')
-transactions_df = transactions_df[transactions_df['t_dat'] >='2020-08-01']
+transactions_df = transactions_df[transactions_df['t_dat'] >='2020-09-01']
 
 
 # Preprocess customer dataframe
@@ -60,6 +60,35 @@ splitrange2 = round(0.95*len(transactions_df['customer_id']))
 train = X.iloc[:splitrange]
 valid = X.iloc[splitrange+1:splitrange2]
 test = X.iloc[splitrange2:]
+
+##########################
+# Trying to create dict tensorflow dataset
+
+ds = tf.data.Dataset.from_tensor_slices(dict(transactions_df))
+ds
+
+ds2 = tf.data.Dataset.from_tensor_slices(transactions_df.to_dict(orient="list"))
+ds2
+
+
+for x in ds2.take(1).as_numpy_iterator():
+  pprint.pprint(x)
+
+
+ds2 = ds2.map(lambda x: {
+    "article_id": x["article_id"],
+    "customer_id": x["customer_id"],
+})
+
+tf.random.set_seed(42)
+shuffled = ds2.shuffle(100_000, seed=42, reshuffle_each_iteration=False)
+
+train = shuffled.take(80_000)
+test = shuffled.skip(80_000).take(20_000)
+
+
+
+
 
 ##################################
 # Defining vocabularys for categorical features aka article and customer
