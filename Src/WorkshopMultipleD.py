@@ -55,9 +55,9 @@ test = X.iloc[splitrange2:]
 articles_sub = articles_df[['article_id']].values.flatten()
 customers_sub = customer_df[['customer_id']].values.flatten()
 
-feature_data = train.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1)
-val_features_data = valid.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1)
-articles_data = articles_df[['article_id']].merge(feature_data, on = 'article_id', how = 'left')
+feature_data = train.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
+val_features_data = valid.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
+articles_data = articles_df[['article_id']].merge(feature_data.drop(['customer_id'],axis=1), on = 'article_id', how = 'left')
 customers_data = customer_df[['customer_id']].merge(train.drop(['t_dat','prod_name','department_name','colour_group_name','article_id'],axis=1), on = 'customer_id', how = 'left')
 
 ### Create data with all features:
@@ -81,15 +81,20 @@ class SimpleRecommender(tf.keras.Model):
         self.dot = tf.keras.layers.Dot(axes=-1)
 
     def call(self, inputs):
-        user = inputs[0]
-        article = inputs[1]
         print('hej')
-        customer_embedding_index = self.customer_table(user['customer_id'].astype(str))
-        article_embedding_index = self.article_table(article['article_id'])
-        customer_data = user
-        customer_data['customer_id'] = customer_embedding_index.numpy()
-        article_data = article
-        article_data['article_id'] = article_embedding_index.numpy()
+        for users, features, y in input:
+            print('users = ', users)
+            print('features = ', features)
+
+            user = inputs[0]
+            print(users)
+            article = inputs[1]
+            customer_embedding_index = self.customer_table(users['customer_id'].astype(str))
+            article_embedding_index = self.article_table(features['article_id'])
+            customer_data = users
+            customer_data['customer_id'] = customer_embedding_index.numpy()
+            article_data = article
+            article_data['article_id'] = article_embedding_index.numpy()
         #customer_embbeding_values = self.customer_embed(customer_embedding_index)
         #article_embedding_values = self.articles_embed(article_embedding_index)
 
@@ -130,8 +135,8 @@ class Mapper():
 
 def get_dataset(df, articles, number_negative_articles):
     dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
-    article_tensor = tf.constant(df.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1).values,dtype=tf.int32)
-
+    #article_tensor = tf.constant(df.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1).values,dtype=tf.int32)
+    article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
     dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
     dataset = dataset.map(Mapper(articles, number_negative_articles)) 
     dataset = dataset.batch(1024)
