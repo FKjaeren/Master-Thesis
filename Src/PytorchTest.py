@@ -6,9 +6,12 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
+from sklearn import preprocessing
+from evaluate import evaluate_model
+from utils import train_one_epoch, test, plot_statistics
 torch.manual_seed(0)
 
-
+from Dataset import MovieLensDataset
 # Python imports
 import argparse
 from time import time
@@ -107,7 +110,7 @@ class Mapper():
         self.num_possible_articles = len(possible_articles)
         self.possible_articles_tensor = torch.tensor(possible_articles)
         self.num_negative_articles = num_negative_articles
-        #self.y = tf.one_hot(0, num_negative_articles+1)
+        self.y = torch.nn.functional.one_hot(self.possible_articles_tensor, -1)
     def __call__(self, customer, article):
         random_negatives_indexes  = torch.randint(0,self.num_possible_articles,self.num_negative_articles)
         negative_products =  self.possible_articles_tensor[random_negatives_indexes]
@@ -115,29 +118,54 @@ class Mapper():
         return (customer, candidates)#, self.y
 
 def get_dataset(df, articles, number_negative_articles):
-    dummy_customer_tensor = torch.tensor(df[['customer_id']].values)
-    article_tensor = torch.tensor(df['article_id'])
+    #dummy_customer_tensor = torch.tensor(df[['customer_id']].values)
+    #article_tensor = torch.tensor(df['article_id'])
+    #df_tensor = torch.cat((torch.tensor(df['Customer_ID']), torch.tensor(df['Article_Id'])), dim = 1)
+    df_tensor = torch.tensor ([df['Customer_ID'],df['Article_Id']])
+    #dataset = df_tensor.map(Mapper(articles, number_negative_articles))
+    num_possible_articles = len(articles)
+    possible_articles_tensor = torch.tensor(articles)
+    y = torch.cat((torch.reshape(possible_articles_tensor, (len(possible_articles_tensor),1)),torch.zeros((len(possible_articles_tensor),number_negative_articles))), dim = 1)
+    random_negatives_indexes  = torch.randint(0,num_possible_articles,number_negative_articles)
+    negative_products =  possible_articles_tensor[random_negatives_indexes]
+    candidates = torch.concat([df[0][:], negative_products], axis = 0)
+    return df_tensor, candidates
 
-    #dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
-    dataset = torch.concat([dummy_customer_tensor,article_tensor], axis = 1)
-    return dataset 
+class dataset_test:
+    def __init__(self, customer_id, article_id):
+        self.customer_id = customer_id
+        self. article_id = article_id
+    def __len__(self):
+        return len(self.customer_id)
+    def __getitem__(self, article_id):
+        customer_id = self.customer_id[article_id]
+        article_id = self.article_id[article_id]
+        return{"customer_id":torch.tensor(customer_id, dtype = torch.long),
+        "article_id":torch.tensor(article_id, dtype = torch.int)}
 
+test = dataset_test(train_df['customer_id'], train_df['article_id'])
 
 def main():
     Customer_id = pd.read_csv('Data/Raw/customers.csv')['customer_id'].values.flatten()
     Article_id = pd.read_csv('Data/Raw/articles.csv')['article_id'].values.flatten()
+    Customer_id_Encoder = preprocessing.LabelEncoder().fit(Customer_id)
+    Article_id_Encoder = preprocessing.LabelEncoder().fit(Article_id)
+    Customer_id_Encoded = Customer_id_Encoder.transform(Customer_id)
+    Article_id_Encoded = Article_id_Encoder.transform(Article_id)
+    all_users_items = {'Customer_ID' : Customer_id_Encoded, 'Article_Id':Article_id_Encoded}
+
+    num_users = len(all_users_items['Customer_ID'])
+    num_items = len(all_users_items['Article_Id'])
 
     train_df = pd.read_csv('Data/Preprocessed/TrainData.csv')
     valid_df = pd.read_csv('Data/Preprocessed/ValidData.csv')
     test_df = pd.read_csv('Data/Preprocessed/TestData.csv')
 
 
-    train_data = get_dataset(train_df, Article_id, 100)
-    validation_data = get_dataset(valid_df, Article_id,100)
-    validation_data = get_dataset(test_df, Article_id,100)
 
-    train_df = get_dataset(train_data, Article_id, 100)
-    valid_df = get_dataset(validation_data, Article_id, 100)
+    feed_dict = {'Customer_ID' :  Customer_id_Encoder.transform(train_df['customer_id']), 'Article_Id': Article_id_Encoder.transform(train_df['article_id'])}
+
+    full_dataset = get_dataset(feed_dict, all_users_items['Article_Id'], 5)
 
     args = parse_args()
     path = args.path
@@ -160,13 +188,14 @@ def main():
     # Load data
 
     t1 = time()
-    full_dataset = MovieLensDataset(
-        path + dataset, num_negatives_train=num_negatives_train, num_negatives_test=num_negatives_test)
+    dataset = 'movielens'
+    path = '/Data/Raw/ml-latest-small/'
+    full_dataset = MovieLensDataset(path + dataset, num_negatives_train=num_negatives_train, num_negatives_test=num_negatives_test)
     train, testRatings, testNegatives = full_dataset.trainMatrix, full_dataset.testRatings, full_dataset.testNegatives
-    num_users, num_items = train.shape
+    #num_users, num_items = train.shape
     print("Load data done [%.1f s]. #user=%d, #item=%d, #train=%d, #test=%d"
           % (time()-t1, num_users, num_items, train.nnz, len(testRatings)))
-
+    
     training_data_generator = DataLoader(
         full_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
