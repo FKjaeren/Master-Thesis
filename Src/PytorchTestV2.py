@@ -49,7 +49,6 @@ class RecSysModel(torch.nn.Module):
     def TrainModel(self, customer, k):
         customer_embedding = self.customer_embedding(customer)
         all_articles_embedding = self.article_embedding(self.all_Articles)
-
         matrixfactorization = torch.matmul(torch.t(customer_embedding), torch.t(all_articles_embedding))
         return matrixfactorization, indexes
 
