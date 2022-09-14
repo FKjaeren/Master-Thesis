@@ -16,7 +16,7 @@ data_path = 'Data/Raw/'
 articles_df = pd.read_csv(data_path+'articles.csv')
 customer_df = pd.read_csv(data_path+'customers.csv')
 transactions_df = pd.read_csv(data_path+'transactions_train.csv')
-transactions_df = transactions_df[transactions_df['t_dat'] >='2020-08-01']
+transactions_df = transactions_df[transactions_df['t_dat'] >='2020-09-01']
 
 
 
@@ -43,7 +43,7 @@ X = X.merge(df_c[['customer_id','age']], how = 'left', on = 'customer_id')
 
 
 
-interactions_dict = X[["customer_id", "age", "prod_name"]]
+interactions_dict = X[["customer_id", "age", "prod_name", "colour_group_name", "product_group_name"]]
 
 interactions_dict = {name: np.array(value) for name, value in interactions_dict.items()}
 interactions = tf.data.Dataset.from_tensor_slices(interactions_dict)
@@ -56,16 +56,21 @@ articles = tf.data.Dataset.from_tensor_slices(articles_dict)
 
 ## map the features in interactions and items
 interactions = interactions.map(lambda x: {
-                              'customer_id' : str(x['customer_id']), 
-                              'age' : str(x['age']),
-                              'prod_name' : str(x['prod_name'])})
+                              'customer_id' : (x['customer_id']), 
+                              'age' : (x['age']),
+                              'prod_name' : (x['prod_name']),
+                              'product_group_name' : (x['product_group_name']),
+                              'colour_group_name' : (x['colour_group_name'])
+                              })
 
-articles = articles.map(lambda x: str(x['prod_name']))
+articles = articles.map(lambda x: (x['prod_name']))
 
 
-u_articles = np.unique(np.concatenate(list(articles.batch(1000))))
+u_articles = np.unique(np.concatenate(list(articles.batch(1_000))))
 u_customer = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["customer_id"]))))
 u_age = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["age"]))))
+u_prod_group = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["product_group_name"]))))
+u_colour = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["colour_group_name"]))))
 
 
 
@@ -86,12 +91,24 @@ class UserModel(tf.keras.Model):
             vocabulary=u_age, mask_token=None),
         tf.keras.layers.Embedding(len(u_age) + 1, 32),
     ])
+    self.colour_embedding = tf.keras.Sequential([
+        tf.keras.layers.StringLookup(
+            vocabulary=u_colour, mask_token=None),
+        tf.keras.layers.Embedding(len(u_colour) + 1, 32),
+    ])
+    self.prod_group_embedding = tf.keras.Sequential([
+        tf.keras.layers.StringLookup(
+            vocabulary=u_prod_group, mask_token=None),
+        tf.keras.layers.Embedding(len(u_prod_group) + 1, 32),
+    ])
 
 
   def call(self, inputs):
     return tf.concat([
         self.user_embedding(inputs["customer_id"]),
         self.age_embedding(inputs["age"]),
+        self.colour_embedding(inputs["colour_group_name"]),
+        self.prod_group_embedding(inputs["product_group_name"]),
         #tf.reshape(self.normalized_timestamp(inputs["timestamp"]), (-1, 1)),
     ], axis=1)
 
@@ -109,7 +126,7 @@ class MovieModel(tf.keras.Model):
           vocabulary=u_articles, mask_token=None),
       tf.keras.layers.Embedding(len(u_articles) + 1, 32)
     ])
-
+    """ 
     self.title_vectorizer = tf.keras.layers.TextVectorization(
         max_tokens=max_tokens)
 
@@ -119,13 +136,13 @@ class MovieModel(tf.keras.Model):
       tf.keras.layers.GlobalAveragePooling1D(),
     ])
 
-    self.title_vectorizer.adapt(articles)
+    self.title_vectorizer.adapt(articles) """
 
   def call(self, titles):
-    return tf.concat([
-        self.title_embedding(titles),
-        self.title_text_embedding(titles),
-    ], axis=1)
+    #return tf.concat([
+    return self.title_embedding(titles)
+       # self.title_text_embedding(titles),
+    #], axis=1)
 
 
 
@@ -155,6 +172,9 @@ class MovielensModel(tfrs.models.Model):
     query_embeddings = self.query_model({
         "customer_id": features["customer_id"],
         "age": features["age"],
+        "colour_group_name": features["colour_group_name"],
+        "product_group_name": features["product_group_name"],
+
     })
     movie_embeddings = self.candidate_model(features["prod_name"])
 
