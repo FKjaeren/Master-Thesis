@@ -9,7 +9,7 @@ splitrange2 = round(0.95*len(transactions_df['customer_id']))
 transactions_data = transactions_df.merge(product[['article_id','prod_name']], how = 'left', on = 'article_id')
 transactions_data_enriched = transactions_data
 transactions_data_enriched = transactions_data_enriched.merge(customers[['customer_id','age']], how = 'left', on = 'customer_id')
-transactions_data_enriched = transactions_data_enriched.merge(product[['article_id','colour_group_code','department_no']])
+transactions_data_enriched = transactions_data_enriched.merge(product[['article_id','colour_group_name','department_name']])
 
 train = transactions_data.iloc[:splitrange]
 valid = transactions_data.iloc[splitrange+1:splitrange2]
@@ -31,3 +31,28 @@ test_sub.to_csv('Data/Preprocessed/TestData.csv',index=False)
 train_enriched.to_csv('Data/Preprocessed/TrainData_enriched.csv',index=False)
 valid_enriched.to_csv('Data/Preprocessed/ValidData_enriched.csv',index=False)
 test_enriched.to_csv('Data/Preprocessed/TestData_enriched.csv',index=False)
+
+colours = product['colour_group_name'].unique()
+departments = product['department_name'].unique()
+customer_ids = customers['customer_id']
+
+colour_df = pd.get_dummies(train_enriched[['customer_id','colour_group_name']],columns = ['colour_group_name'])
+colour_df_test = colour_df.groupby('customer_id').sum()
+colour_df_test['max'] = colour_df_test.idxmax(axis=1)
+colour_df_test = colour_df_test.reset_index()[['customer_id','max']]
+
+department_df = pd.get_dummies(train_enriched[['customer_id','department_name']],columns = ['department_name'])
+department_df_test = department_df.groupby('customer_id').sum()
+department_df_test['max'] = department_df_test.idxmax(axis=1)
+department_df_test = department_df_test.reset_index()[['customer_id','max']]
+
+
+product_aggregated = train_enriched[['price','prod_name','age','sales_channel_id']].groupby(['prod_name']).mean()
+product_aggregated = product_aggregated.reset_index()
+product_aggregated = product_aggregated.merge(product[['prod_name','colour_group_name','department_name']], how = 'left', on = 'prod_name')
+
+customer_aggregated = colour_df_test.merge(department_df_test, how = 'left', on =  'customer_id', suffixes = ('_colour','_department'))
+customer_aggregated = customer_aggregated.merge(customers[['customer_id','age']], how = 'left', on = 'customer_id')
+
+customer_aggregated.to_csv('Data/Preprocessed/Customers_enriched.csv',index = False)
+product_aggregated.to_csv('Data/Preprocessed/Products_enriched.csv',index = False)
