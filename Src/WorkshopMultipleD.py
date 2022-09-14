@@ -6,7 +6,8 @@ data_path = 'Data/Raw/'
 
 articles_df = pd.read_csv(data_path+'articles.csv')
 customer_df = pd.read_csv(data_path+'customers.csv')
-transactions_df = pd.read_csv(data_path+'transactions_train.csv')
+#transactions_df = pd.read_csv(data_path+'transactions_train.csv')
+transactions_df = pd.read_csv('Data/Preprocessed/transactions_df_subset.csv')
 
 # Preprocess customer dataframe
 # check for NaN and make a subset with relevant columns
@@ -54,32 +55,51 @@ test = X.iloc[splitrange2:]
 articles_sub = articles_df[['article_id']].values.flatten()
 customers_sub = customer_df[['customer_id']].values.flatten()
 
+feature_data = train.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
+val_features_data = valid.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
+articles_data = articles_df[['article_id']].merge(feature_data.drop(['customer_id'],axis=1), on = 'article_id', how = 'left')
+customers_data = customer_df[['customer_id']].merge(train.drop(['t_dat','prod_name','department_name','colour_group_name','article_id'],axis=1), on = 'customer_id', how = 'left')
+
+### Create data with all features:
+
 class SimpleRecommender(tf.keras.Model):
     def __init__(self, customers_sub, articles_sub, embedding_dim):
         super(SimpleRecommender, self).__init__()
+        articles_sub = articles_sub['article_id'].unique().astype(str)
+        customers_sub = customers_sub['customer_id'].unique().astype(str)
+        
         self.articles = tf.constant(articles_sub, dtype=tf.int32)
         self.customers = tf.constant(customers_sub, dtype=tf.string)
 
-        self.article_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.articles, range(len(articles_sub))),-1)
-        self.customer_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.customers, range(len(customers_sub))),-1)
+        #self.article_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.articles, range(len(articles_sub))),-1)
+        self.customer_table = tf.keras.layers.StringLookup(vocabulary=customers_sub, mask_token=None, output_mode='int')
 
-        self.customer_embed = tf.keras.layers.Embedding(len(customers_sub),embedding_dim)
+        self.article_table = tf.keras.layers.StringLookup(vocabulary=articles_sub, mask_token=None, output_mode='int')
+        #self.customer_embed = tf.keras.layers.Embedding(len(customers_data),embedding_dim,customers_data.shape[1])
 
-        self.articles_embed = tf.keras.layers.Embedding(len(articles_sub),embedding_dim)
-
+        #self.articles_embed = tf.keras.layers.Embedding(len(articles_data),embedding_dim, articles_data.shape[1])
         self.dot = tf.keras.layers.Dot(axes=-1)
 
     def call(self, inputs):
-        user = inputs[0]
-        article = inputs[1]
+        print('hej')
+        for users, features, y in input:
+            print('users = ', users)
+            print('features = ', features)
 
-        customer_embedding_index = self.customer_table.lookup(user)
-        article_embedding_index = self.article_table.lookup(article)
+            user = inputs[0]
+            print(users)
+            article = inputs[1]
+            customer_embedding_index = self.customer_table(users['customer_id'].astype(str))
+            article_embedding_index = self.article_table(features['article_id'])
+            customer_data = users
+            customer_data['customer_id'] = customer_embedding_index.numpy()
+            article_data = article
+            article_data['article_id'] = article_embedding_index.numpy()
+        #customer_embbeding_values = self.customer_embed(customer_embedding_index)
+        #article_embedding_values = self.articles_embed(article_embedding_index)
 
-        customer_embbeding_values = self.customer_embed(customer_embedding_index)
-        article_embedding_values = self.articles_embed(article_embedding_index)
-
-        return tf.squeeze(self.dot([customer_embbeding_values, article_embedding_values]),1)
+        #return tf.squeeze(self.dot([customer_embbeding_values, article_embedding_values]),1)
+        return tf.squeeze(self.dot([customer_data, article_data]),1)
     
     def call_item_item(self, article):
         article_x = self.article_table.lookup(article)
@@ -115,8 +135,8 @@ class Mapper():
 
 def get_dataset(df, articles, number_negative_articles):
     dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
+    #article_tensor = tf.constant(df.drop(['customer_id','t_dat','prod_name','department_name','colour_group_name'],axis=1).values,dtype=tf.int32)
     article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
-
     dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
     dataset = dataset.map(Mapper(articles, number_negative_articles)) 
     dataset = dataset.batch(1024)
@@ -128,12 +148,13 @@ for (customer, candidate), y in get_dataset(train,articles_sub,4):
     print(y)
     break
 
-model = SimpleRecommender(customers_sub, articles_sub, 15)
+model = SimpleRecommender(customers_data, articles_data, 64)
 model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
             optimizer=tf.keras.optimizers.SGD(learning_rate = 100.), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
 model.fit(get_dataset(train, articles_sub, 100), validation_data = get_dataset(valid, articles_sub,100), epochs =5)
+model.fit(feature_data, validation_data = val_features_data, epochs =5)
 
 test_customer = '6f494dbbc7c70c04997b14d3057edd33a3fc8c0299362967910e80b01254c656'
 test_article = 806388002
