@@ -54,5 +54,7 @@ product_aggregated = product_aggregated.merge(product[['prod_name','colour_group
 customer_aggregated = colour_df_test.merge(department_df_test, how = 'left', on =  'customer_id', suffixes = ('_colour','_department'))
 customer_aggregated = customer_aggregated.merge(customers[['customer_id','age']], how = 'left', on = 'customer_id')
 
+customer_aggregated_extra = train[['customer_id','price','sales_channel_id']].groupby('customer_id').mean()
+customer_aggregated = customer_aggregated.merge(customer_aggregated_extra, how = 'left', on = 'customer_id')
 customer_aggregated.to_csv('Data/Preprocessed/Customers_enriched.csv',index = False)
 product_aggregated.to_csv('Data/Preprocessed/Products_enriched.csv',index = False)
