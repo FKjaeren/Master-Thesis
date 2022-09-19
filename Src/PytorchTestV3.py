@@ -55,7 +55,7 @@ class RecSysModel(torch.nn.Module):
         self.All_Products = Products_data
 
         #self.dot = torch.dot()
-        self.out = nn.Linear(64,5)
+        self.out = nn.Linear(64,n_products+1)
 
     def monitor_metrics(self, output, target):
         output = output.detatch().numpy()
@@ -83,8 +83,11 @@ class RecSysModel(torch.nn.Module):
         #    print("product i: ",i)
         #    product_embedding_temp = self.product_embedding(Product_data[:,i].reshape(-1,1))
         #    product_embedding = torch.cat((product_embedding,product_embedding_temp), dim = 1)
-
+        print('test1')
         output = torch.matmul((product_embedding_final), torch.t(customer_embedding_final))
+        print('test2')
+        output = self.out(output)
+        #output = output.long()
         #calc_metrics = self.monitor_metrics(output,Product_data[:,0].view(1,-1))
         return output#, calc_metrics
 
@@ -249,6 +252,8 @@ for epoch in range(1,num_epochs):
         # Compute the loss and its gradients
         #labels_one_hot = torch.zeros(Num_classes, batch_size)
         #labels_one_hot[product_id] = 1
+        print(output)
+        print(product_id)
         loss = loss_fn(output,product_id)
         loss.backward()
 
