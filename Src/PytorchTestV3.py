@@ -164,7 +164,7 @@ Customer_data['price'] = Price_encoder.transform(Customer_data[['price']].to_num
 customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
 
-
+valid_dataset = valid_dataset[0:100000]
 
 product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
 customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
@@ -204,6 +204,7 @@ Best_loss = np.infty
 for epoch in range(1,num_epochs+1):
     running_loss = 0.
     epoch_loss = []
+    model.train()
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
@@ -228,25 +229,26 @@ for epoch in range(1,num_epochs+1):
 
             # Gather data and report
         epoch_loss.append(loss.item())
-        if(i % 5 == 0):
-            print('  batch {} loss: {}'.format(i, np.mean(epoch_loss)))
+        if(i % 10 == 0):
+            print(' Train batch {} loss: {}'.format(i, np.mean(epoch_loss)))
         
         epoch_loss.append(loss.item())
     epoch_loss_value = np.mean(epoch_loss)
     Loss_list.append(epoch_loss_value)
-
-    with torch.no_grad():
-        epoch_valid_loss = []
-        for i, product_data_batch, customer_data_batch in zip(np.arange(1,product_valid_dataset.shape()[0]), product_valid_loader, customer_valid_loader):
-            product_id = product_data_batch[:,0].type(torch.long)
-            loss = loss_fn(output,product_id)
-            epoch_valid_loss.append(loss.item())
+    model.eval()
+    epoch_valid_loss = []
+    for i, product_data_batch, customer_data_batch in zip(np.arange(1,product_valid_dataset.shape()[0]), product_valid_loader, customer_valid_loader):
+        product_id = product_data_batch[:,0].type(torch.long)
+        loss = loss_fn(output,product_id)
+        epoch_valid_loss.append(loss.item())
+        if(i % 10 == 0):
+            print(' Valid batch {} loss: {}'.format(i, np.mean(epoch_valid_loss)))
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
         best_model = model
         Best_loss = epoch_valid_loss_value
-
+torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 
 #prof.stop()
 print("finished training")
