@@ -51,9 +51,10 @@ class RecSysModel(torch.nn.Module):
         self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim)
         self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim)
 
+
         self.All_Products = Products_data
 
-        self.out = nn.Linear(64,n_products+1)
+        #self.out = nn.Linear(64,n_products+1)
 
     def monitor_metrics(self, output, target):
         output = output.detatch().numpy()
@@ -73,17 +74,23 @@ class RecSysModel(torch.nn.Module):
         age_embedding = self.age_embedding(self.All_Products[:,2])
         colour_embedding = self.colour_embedding(self.All_Products[:,3])
         department_embedding = self.department_embedding(self.All_Products[:,4])
-        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
+        self.product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
-        output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final))
+
+        output = torch.matmul((customer_embedding_final), torch.t(self.product_embedding_final))
         #calc_metrics = self.monitor_metrics(output,Product_data[:,0].view(1,-1))
         return output#, calc_metrics
 
-    def CustomerItemRecommendation(self, customer, k):
-        customer_embedding = self.customer_embedding(customer)
-        all_products_embedding = self.product_embedding(self.All_Products)
+    def CustomerItemRecommendation(self, Customer_data, k):
+        customer_embedding = self.customer_embedding(Customer_data[:,0])
+        price_embedding = self.price_embedding(Customer_data[:,1])
+        age_embedding = self.age_embedding(Customer_data[:,2])
+        colour_embedding = self.colour_embedding(Customer_data[:,3])
+        department_embedding = self.department_embedding(Customer_data[:,4])
+        customer_embedding_final = torch.cat((customer_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
-        matrixfactorization = torch.mm(torch.t(customer_embedding), torch.t(all_products_embedding))
+
+        matrixfactorization = torch.matmul((customer_embedding_final), torch.t(self.product_embedding_final))
         recommendations, indexes = torch.topk(matrixfactorization, k = k)
         return recommendations, indexes
 
@@ -102,21 +109,21 @@ all_customers = pd.read_csv('Data/Raw/customers.csv')
 all_products = pd.read_csv('Data/Raw/articles.csv')
 
 num_customers = all_customers['customer_id'].nunique()
-num_products = all_products['prod_name'].nunique()
+num_products = all_products['article_id'].nunique()
 num_departments = all_products['department_name'].nunique()
 num_colours = all_products['colour_group_name'].nunique()
 max_age = 110
 
 
 Customer_id_Encoder = preprocessing.LabelEncoder().fit(all_customers['customer_id'])
-Product_Encoder = preprocessing.LabelEncoder().fit(all_products['prod_name'])
+Product_Encoder = preprocessing.LabelEncoder().fit(all_products['article_id'])
 Customer_data['customer_id'] = Customer_id_Encoder.transform(Customer_data['customer_id'])
-Product_data['product_id'] = Product_Encoder.transform(Product_data['prod_name'])
-Product_data = Product_data.drop(columns=['prod_name'], axis = 1)
+#Product_data['article_id'] = Product_Encoder.transform(Product_data['article_id'])
+#Product_data = Product_data.drop(columns=['prod_name'], axis = 1)
 
 
-Colour_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_colours+1).fit(Product_data[['colour_group_name']].to_numpy().reshape(-1, 1))
-Department_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_departments+1).fit(Product_data[['department_name']].to_numpy().reshape(-1, 1))
+Colour_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_colours+1).fit(all_products[['colour_group_name']].to_numpy().reshape(-1, 1))
+Department_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_departments+1).fit(all_products[['department_name']].to_numpy().reshape(-1, 1))
 Age_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=110).fit(all_customers[['age']].to_numpy().reshape(-1, 1))
 
 all_prices = np.concatenate((Product_data['price'].unique(),Customer_data['price'].unique()),axis = 0)
@@ -129,22 +136,33 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 train_dataset = copy.deepcopy(train_df)
 train_dataset['price'] = train_dataset['price'].round(decimals=4)
 train_dataset.customer_id = Customer_id_Encoder.transform(train_df.customer_id.values)
-train_dataset['product_id'] = Product_Encoder.transform(train_df.prod_name.values)
+train_dataset['product_id'] = Product_Encoder.transform(train_df.article_id.values)
 train_dataset['colour_group_name'] = Colour_Encoder.transform(train_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 train_dataset['department_name'] = Department_encoder.transform(train_dataset[['department_name']].to_numpy().reshape(-1, 1))
 train_dataset['age'] = Age_encoder.transform(train_dataset[['age']].to_numpy().reshape(-1,1))
 train_dataset['price'] = Price_encoder.transform(train_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
 
+valid_df = valid_df[0:100000]
+
 valid_dataset = copy.deepcopy(valid_df)
 valid_dataset.customer_id = Customer_id_Encoder.transform(valid_df.customer_id.values)
-valid_dataset['product_id'] = Product_Encoder.transform(valid_df.prod_name.values)
+valid_dataset['product_id'] = Product_Encoder.transform(valid_df.article_id.values)
 valid_dataset['colour_group_name'] = Colour_Encoder.transform(valid_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 valid_dataset['department_name'] = Department_encoder.transform(valid_dataset[['department_name']].to_numpy().reshape(-1, 1))
 valid_dataset['age'] = Age_encoder.transform(valid_dataset[['age']].to_numpy().reshape(-1,1))
 
-Product_data['colour_group_name'] = Colour_Encoder.transform(Product_data[['colour_group_name']].to_numpy().reshape(-1, 1))
-Product_data['department_name'] = Department_encoder.transform(Product_data[['department_name']].to_numpy().reshape(-1, 1))
-Product_data = Product_data[['product_id','age','price','sales_channel_id','colour_group_name','department_name']]
+test_dataset = copy.deepcopy(test_df)
+test_dataset.customer_id = Customer_id_Encoder.transform(test_df.customer_id.values)
+test_dataset['product_id'] = Product_Encoder.transform(test_df.article_id.values)
+test_dataset['colour_group_name'] = Colour_Encoder.transform(test_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
+test_dataset['department_name'] = Department_encoder.transform(test_dataset[['department_name']].to_numpy().reshape(-1, 1))
+test_dataset['age'] = Age_encoder.transform(test_dataset[['age']].to_numpy().reshape(-1,1))
+
+test_dataset.to_csv('Data/Preprocessed/test_final.csv',index=False)
+
+#Product_data['colour_group_name'] = Colour_Encoder.transform(Product_data[['colour_group_name']].to_numpy().reshape(-1, 1))
+#Product_data['department_name'] = Department_encoder.transform(Product_data[['department_name']].to_numpy().reshape(-1, 1))
+#Product_data = Product_data[['article_id','age','price','sales_channel_id','colour_group_name','department_name']]
 Product_data['age'] = Product_data['age'].round(decimals = 0)
 Product_data['age'] = Age_encoder.transform(Product_data[['age']].to_numpy().reshape(-1,1))
 Product_data['price'] = Product_data['price'].round(decimals=4)
@@ -162,9 +180,8 @@ Customer_data['price'] = Customer_data['price'].round(decimals=4)
 Customer_data['price'] = Price_encoder.transform(Customer_data[['price']].to_numpy().reshape(-1,1))
 
 customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
+product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
-valid_dataset = valid_dataset[0:100000]
 
 product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
 customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
@@ -237,18 +254,22 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     model.eval()
     epoch_valid_loss = []
-    for i, product_data_batch, customer_data_batch in zip(np.arange(1,product_valid_dataset.shape()[0]), product_valid_loader, customer_valid_loader):
-        product_id = product_data_batch[:,0].type(torch.long)
+    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,product_valid_dataset.shape()[0]), product_valid_loader, customer_valid_loader):
+        product_id = product_data_batch_valid[:,0].type(torch.long)
+        outputs = model(customer_data_batch_valid, product_data_batch_valid)
+        output = torch.squeeze(outputs, 1)
         loss = loss_fn(output,product_id)
         epoch_valid_loss.append(loss.item())
-        if(i % 10 == 0):
+        if(batch % 10 == 0):
             print(' Valid batch {} loss: {}'.format(i, np.mean(epoch_valid_loss)))
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
         best_model = model
         Best_loss = epoch_valid_loss_value
-torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
+#torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
+PATH = 'Models/Baseline_MulitDim_model.pth'
+torch.save(best_model, PATH)
 
 #prof.stop()
 print("finished training")
