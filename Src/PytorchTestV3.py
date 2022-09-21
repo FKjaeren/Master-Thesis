@@ -1,5 +1,5 @@
 import torch
-import torchvision
+#import torchvision
 from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -11,14 +11,14 @@ import copy
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
-
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 #dtype = torch.float
 #device = 
 #device = torch.device("mps")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #device = torch.device("mps")
-
 class CreateDataset(Dataset):
     def __init__(self, dataset, features, idx_variable, device):
 
@@ -31,11 +31,14 @@ class CreateDataset(Dataset):
         return len(self.all_data)
 
     def __getitem__(self, row):
+        #print("Før feature og ind til device ")
 
-        features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int, device=self.device)
-        idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int, device = self.device)
+        features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int)#, device=self.device)
+        idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int)#, device = self.device)
+        #print("Hej ", idx_variable.device)
         all_data = torch.cat((idx_variable, features), dim = 1)
-        print("device of dataset is: ",all_data.device)
+        #all_data = all_data.to(self.device)
+        #print("device of dataset is: ",all_data.device)
         return all_data[row]
     def shape(self):
         shape_value = self.all_data.shape
@@ -53,12 +56,12 @@ class RecSysModel(torch.nn.Module):
         self.num_ages = n_ages
         self.num_colours = n_colours
         self.num_departments = n_departments
-        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim, device = device)        
-        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim, device = device)
-        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim, device = device)
-        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim, device = device)
-        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim, device = device)
-        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim, device = device)
+        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim)#, device = device)        
+        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim)#, device = device)
+        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim)#, device = device)
+        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim)#, device = device)
+        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim)#, device = device)
+        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim)#, device = device)
 
 
         self.All_Products = Products_data
@@ -84,10 +87,10 @@ class RecSysModel(torch.nn.Module):
         age_embedding = self.age_embedding(self.All_Products[:,2])
         colour_embedding = self.colour_embedding(self.All_Products[:,3])
         department_embedding = self.department_embedding(self.All_Products[:,4])
-        self.product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
+        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
 
-        output = torch.matmul((customer_embedding_final), torch.t(self.product_embedding_final))
+        output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final))
         #calc_metrics = self.monitor_metrics(output,Product_data[:,0].view(1,-1))
         return output#, calc_metrics
 
@@ -152,6 +155,8 @@ train_dataset['department_name'] = Department_encoder.transform(train_dataset[['
 train_dataset['age'] = Age_encoder.transform(train_dataset[['age']].to_numpy().reshape(-1,1))
 train_dataset['price'] = Price_encoder.transform(train_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
 
+
+
 valid_df = valid_df[0:100000]
 
 valid_dataset = copy.deepcopy(valid_df)
@@ -200,10 +205,10 @@ customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','c
 
 batch_size = 1024
 embedding_dim = 64
-model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products,
-                    n_customers=num_customers, n_prices=num_prices, n_colours=num_colours, n_departments=num_departments, device = device)
+model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products+1,
+                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1, device = device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
-
+model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 1
 
@@ -244,6 +249,10 @@ for epoch in range(1,num_epochs+1):
         # Zero your gradients for every batch!
         optimizer.zero_grad()
 
+
+        #
+        customer_data_batch = customer_data_batch.to(device)
+        product_data_batch = product_data_batch.to(device)
         # Make predictions for this batch
         outputs = model(customer_data_batch, product_data_batch)
         output = torch.squeeze(outputs, 1)
