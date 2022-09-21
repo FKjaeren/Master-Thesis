@@ -4,7 +4,9 @@ import tensorflow as tf
 import os
 from typing import Dict, Text
 import pprint
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
@@ -43,8 +45,21 @@ X = X.merge(df_c[['customer_id','age']], how = 'left', on = 'customer_id')
 
 
 
+da = np.ones(len(X))
 
-interactions_dict = X[["customer_id", "age", "prod_name"]]
+
+
+X["quantity"] = da 
+
+X[["customer_id", "prod_name"]] = X[["customer_id", "prod_name"]].astype(str)
+X[["quantity"]] = X[["quantity"]].astype(float)
+
+
+
+interactions_dict = X.groupby(['customer_id', 'prod_name'])['quantity'].sum().reset_index()
+
+
+
 
 interactions_dict = {name: np.array(value) for name, value in interactions_dict.items()}
 interactions = tf.data.Dataset.from_tensor_slices(interactions_dict)
@@ -53,292 +68,113 @@ articles_dict = X[['prod_name']].drop_duplicates()
 articles_dict = {name: np.array(value) for name, value in articles_dict.items()}
 articles = tf.data.Dataset.from_tensor_slices(articles_dict)
 
+
+
 ## map the features in interactions and items
 interactions = interactions.map(lambda x: {
                               'customer_id' : (x['customer_id']), 
-                              'age' : int(x['age']),
-                              'prod_name' : (x['prod_name'])})
+                              'prod_name' : (x['prod_name']),    
+                              'quantity' : (x['quantity']),
+                              })
 
-articles = articles.map(lambda x: str(x['prod_name']))
+articles = articles.map(lambda x: (x['prod_name']))
 
 
-
-
-u_articles = np.unique(np.concatenate(list(articles.batch(1000))))
+for x in articles.take(100).as_numpy_iterator():
+  pprint.pprint(x)
+u_articles = np.unique(np.concatenate(list(articles.batch(1_000))))
 u_customer = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["customer_id"]))))
-u_age = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["age"]))))
 
 
-##########################
-# Trying to create dict tensorflow dataset
-#X['article_id'] = X['article_id'].astype(str)
 
 
-X[['customer_id',      
-          'prod_name',
-          'age',
-         ]] = X[['customer_id','prod_name', 'age']].astype(str)
-ds = tf.data.Dataset.from_tensor_slices(dict(X))
-""" 
-articles_dict = X[['prod_name']].drop_duplicates()
-articles_dict = {name: np.array(value) for name, value in articles_dict.items()}
-articles = tf.data.Dataset.from_tensor_slices(articles_dict)
-
-articles = articles.batch(1_000).map(lambda x: x['prod_name'])
-
-u_articles = np.unique(np.concatenate(list(articles))) """
-
-ds = ds.map(lambda x: {
-    #"article_id": (x["article_id"]),
-    "prod_name": (x["prod_name"]),
-    "customer_id": (x["customer_id"]),
-    "age": (x["age"]),
-    #"product_group_name": x["product_group_name"],
-})
-""" title_text = tf.keras.layers.TextVectorization()
-title_text.adapt(ds.map(lambda x: x["prod_name"]))
-for row in ds.batch(1_000).map(lambda x: x["prod_name"]).take(1):
-  print(title_text(row))
-title_text.get_vocabulary()[0:10] """
-
-#p_name = ds.batch(1_000).map(lambda x: x["product_group_name"])
-#articles = ds.batch(1_000).map(lambda x: x["prod_name"])
-articles = ds.batch(1_000).map(lambda x: x['prod_name'])
-customer = ds.batch(1_000).map(lambda x: x["customer_id"])
-age = ds.batch(1_000).map(lambda x: x["age"])
-
-
-u_articles = np.unique(np.concatenate(list(articles)))
-u_customer = np.unique(np.concatenate(list(customer)))
-u_age = np.unique(np.concatenate(list(age)))
-u_age
 
 for x in articles.take(1).as_numpy_iterator():
   pprint.pprint(x)
+feature_names = ["customer_id", "prod_name"]
+vocabularies = {}
 
-    
+for feature_name in feature_names:
+  vocab = interactions.batch(1_000_000).map(lambda x: x[feature_name])
+  vocabularies[feature_name] = np.unique(np.concatenate(list(vocab)))
 
+class DCN(tfrs.Model):
 
-class CustomerModel(tf.keras.Model):
-
-  def __init__(self):
+  def __init__(self, use_cross_layer, deep_layer_sizes, projection_dim=None):
     super().__init__()
 
-    self.customer_embedding = tf.keras.Sequential([
-        tf.keras.layers.StringLookup(
-            vocabulary=u_customer, mask_token=None),
-        tf.keras.layers.Embedding(len(u_customer) + 1, 32),
-    ])
-    self.age_embedding = tf.keras.Sequential([
-        tf.keras.layers.StringLookup(
-            vocabulary=u_age, mask_token=None),
-        tf.keras.layers.Embedding(len(u_age) + 1, 32),
-    ])
+    self.embedding_dimension = 32
 
-  def call(self, inputs):
-      # Take the input dictionary, pass it through each input layer,
-      # and concatenate the result.
-      return tf.concat([
-          self.customer_embedding(inputs["customer_id"]),
-          self.age_embedding(inputs["age"]),], axis=1)
+    str_features = ["customer_id", "prod_name"]
+    #int_features = ["user_gender", "bucketized_user_age"]
 
+    self._all_features = str_features #+ int_features
+    self._embeddings = {}
 
-class QueryModel(tf.keras.Model):
-    """Model for encoding user queries."""
-
-    def __init__(self, layer_sizes, projection_dim=None):
-        """Model for encoding user queries.
-
-        Args:
-          layer_sizes:
-            A list of integers where the i-th entry represents the number of units
-            the i-th layer contains.
-        """
-        super().__init__()
-
-        # We first use the user model for generating embeddings.
-        self.embedding_model = CustomerModel()
-            
-#         self.dense_layers = tf.keras.Sequential([
-#                                     tfrs.layers.dcn.Cross(projection_dim=projection_dim,
-#                                                           kernel_initializer="glorot_uniform"),
-#                                     tf.keras.layers.Dense(256, activation="relu"),
-#                                     tf.keras.layers.Dense(128, activation="relu"),
-#                                     tf.keras.layers.Dense(1)
-#             ])
-
-        # Then construct the layers.
-        self.dense_layers = tf.keras.Sequential(tfrs.layers.dcn.Cross(projection_dim=projection_dim,
-                                        kernel_initializer="glorot_uniform"))
-
-        # Use the ReLU activation for all but the last layer.
-        for layer_size in layer_sizes[:-1]:
-            self.dense_layers.add(tf.keras.layers.Dense(layer_size, activation="relu"))
-
-        # No activation for the last layer.
-        for layer_size in layer_sizes[-1:]:
-            self.dense_layers.add(tf.keras.layers.Dense(layer_size))
-
-    def call(self, inputs):
-        feature_embedding = self.embedding_model(inputs)
-        return self.dense_layers(feature_embedding)
-
-
-class ArticleModel(tf.keras.Model):
-
-    def __init__(self):
-        super().__init__()
-        
-        self.embedding_dimension = 32
-
-        max_tokens = 10_000
-
-        self.title_embedding = tf.keras.Sequential([
-          tf.keras.layers.experimental.preprocessing.StringLookup(
-              vocabulary=u_articles,mask_token=None),
-          tf.keras.layers.Embedding(len(u_articles) + 1, self.embedding_dimension)
-        ])
-
-        self.title_vectorizer = tf.keras.layers.experimental.preprocessing.TextVectorization(
-            max_tokens=max_tokens)
-
-        self.title_text_embedding = tf.keras.Sequential([
-          self.title_vectorizer,
-          tf.keras.layers.Embedding(max_tokens, self.embedding_dimension, mask_zero=True),
-          tf.keras.layers.GlobalAveragePooling1D(),
-        ])
-
-        self.title_vectorizer.adapt(articles)
-
-    def call(self, inputs):
-        print('features object looks like: ', inputs[:,0])
-
-        return tf.concat([
-            self.title_embedding(inputs),
-            self.title_text_embedding(inputs), #[:,0]
-        ], axis=1)
-
-
-class CandidateModel(tf.keras.Model):
-    """Model for encoding movies."""
-
-    def __init__(self, layer_sizes, projection_dim=None):
-        """Model for encoding movies.
-
-        Args:
-          layer_sizes:
-            A list of integers where the i-th entry represents the number of units
-            the i-th layer contains.
-        """
-        super().__init__()
-
-        self.embedding_model = ArticleModel()
-
-         # Then construct the layers.
-        self.dense_layers = tf.keras.Sequential(tfrs.layers.dcn.Cross(projection_dim=projection_dim,
-                                                kernel_initializer="glorot_uniform"))
-
-        # Use the ReLU activation for all but the last layer.
-        for layer_size in layer_sizes[:-1]:
-            self.dense_layers.add(tf.keras.layers.Dense(layer_size, activation="relu"))
-
-        # No activation for the last layer.
-        for layer_size in layer_sizes[-1:]:
-            self.dense_layers.add(tf.keras.layers.Dense(layer_size))
-
-    def call(self, inputs):
-        feature_embedding = self.embedding_model(inputs)
-        return self.dense_layers(feature_embedding)
-
-
-
-class CrossDNNModel(tfrs.models.Model):
-
-    def __init__(self, layer_sizes, rating_weight: float, retrieval_weight: float, projection_dim=None ):
-        super().__init__()
-        
-        self.query_model : tf.keras.Model = QueryModel(layer_sizes)
-        self.candidate_model : tf.keras.Model = CandidateModel(layer_sizes)
-        
-        ## rating and retrieval task.
-        
-        self.rating_task = tfrs.tasks.Ranking(
-            loss=tf.keras.losses.MeanSquaredError(),
-            metrics=[tf.keras.metrics.RootMeanSquaredError()],
-        )
-                 
-        self.retrieval_task : tf.keras.layers.Layer = tfrs.tasks.Retrieval(
-            metrics=tfrs.metrics.FactorizedTopK(
-                candidates=articles.batch(128).map(self.candidate_model)
-            )
-        )
-
-        # The loss weights.
-        self.rating_weight = rating_weight
-        self.retrieval_weight = retrieval_weight
-
-    def compute_loss(self, features, training=False):
-        
-        # We only pass the user id and timestamp features into the query model. This
-        # is to ensure that the training inputs would have the same keys as the
-        # query inputs. Otherwise the discrepancy in input structure would cause an
-        # error when loading the query model after saving it.
-        #ratings = features.pop("quantity")
-        
-        query_embeddings = self.query_model({
-            "customer_id": features["customer_id"],
-            "age": features["age"],
-        })
-    
-        article_embeddings = self.candidate_model(features['prod_name'])       
-        retrieval_loss = self.retrieval_task(query_embeddings, article_embeddings)
-    
-    
-        return self.retrieval_task(query_embeddings, article_embeddings)
-
-
-class RetrievalModel(tfrs.Model):
-
-  def __init__(self):
-    super().__init__()
-
-    embedding_dimension = 32
-
-    # Set up a model for representing articles.
-    self.article_model = tf.keras.Sequential([
-      tf.keras.layers.StringLookup(
-        vocabulary=u_articles, mask_token=None),
-      # We add an additional embedding to account for unknown tokens.
-      tf.keras.layers.Embedding(len(u_articles) + 1, embedding_dimension)
+    # Compute embeddings for string features.
+    for feature_name in str_features:
+      vocabulary = vocabularies[feature_name]
+      self._embeddings[feature_name] = tf.keras.Sequential(
+          [tf.keras.layers.StringLookup(
+              vocabulary=vocabulary, mask_token=None),
+           tf.keras.layers.Embedding(len(vocabulary) + 1,
+                                     self.embedding_dimension)
     ])
 
-    self.customer_model = tf.keras.Sequential([
-        tf.keras.layers.StringLookup(
-            vocabulary=u_customer, mask_token=None),
-        # We add an additional embedding to account for unknown tokens.
-        tf.keras.layers.Embedding(len(u_customer) + 1, embedding_dimension)
-        ])
+    """ # Compute embeddings for int features.
+    for feature_name in int_features:
+      vocabulary = vocabularies[feature_name]
+      self._embeddings[feature_name] = tf.keras.Sequential(
+          [tf.keras.layers.IntegerLookup(
+              vocabulary=vocabulary, mask_value=None),
+           tf.keras.layers.Embedding(len(vocabulary) + 1,
+                                     self.embedding_dimension)
+    ])
+ """
+    if use_cross_layer:
+      self._cross_layer = tfrs.layers.dcn.Cross(
+          projection_dim=projection_dim,
+          kernel_initializer="glorot_uniform")
+    else:
+      self._cross_layer = None
 
-    # Set up a task to optimize the model and compute metrics.
-    self.task = tfrs.tasks.Retrieval(
-      metrics=tfrs.metrics.FactorizedTopK(
-        candidates=articles.batch(128).cache().map(self.article_model)
-      )
+    self._deep_layers = [tf.keras.layers.Dense(layer_size, activation="relu")
+      for layer_size in deep_layer_sizes]
+
+    self._logit_layer = tf.keras.layers.Dense(1)
+
+    self.task = tfrs.tasks.Ranking(
+      loss=tf.keras.losses.MeanSquaredError(),
+      metrics=[tf.keras.metrics.RootMeanSquaredError("RMSE")]
     )
 
-  def compute_loss(self, features: Dict[Text, tf.Tensor], training=False) -> tf.Tensor:
-    #print('features object looks like: ', features[:,0])
-    # We pick out the customer features and pass them into the customer model.
-    customer_embeddings = self.customer_model(features["customer_id"])
-    print('customer_embedding looks like: ', customer_embeddings)
-    # And pick out the article features and pass them into the article model,
-    # getting embeddings back.
-    positive_article_embeddings = self.article_model(features["article_id"])
-    print('postitive_article_embedding looks like: ', positive_article_embeddings)
+  def call(self, features):
+    # Concatenate embeddings
+    embeddings = []
+    for feature_name in self._all_features:
+      embedding_fn = self._embeddings[feature_name]
+      embeddings.append(embedding_fn(features[feature_name]))
 
-    # The task computes the loss and the metrics.
+    x = tf.concat(embeddings, axis=1)
 
-    return self.task(customer_embeddings, positive_article_embeddings, compute_metrics=not training)
+    # Build Cross Network
+    if self._cross_layer is not None:
+      x = self._cross_layer(x)
+
+    # Build Deep Network
+    for deep_layer in self._deep_layers:
+      x = deep_layer(x)
+
+    return self._logit_layer(x)
+
+  def compute_loss(self, features, training=False):
+    labels = features.pop("quantity")
+    scores = self(features)
+    return self.task(
+        labels=labels,
+        predictions=scores,
+    )
+
 
 
 
@@ -348,25 +184,79 @@ shuffled = interactions.shuffle(100_000, seed=42, reshuffle_each_iteration=False
 train = shuffled.take(80_000)
 test = shuffled.skip(80_000).take(20_000)
 
-cached_train = train.shuffle(100_000).batch(2048)
+cached_train = train.shuffle(100_000).batch(8192).cache()
+
+
 cached_test = test.batch(4096).cache()
 
-model = CrossDNNModel([32], rating_weight=0.5, retrieval_weight=0.5, projection_dim=None)
-
-model.compile(optimizer=tf.keras.optimizers.Adagrad(0.1))
-
-model.fit(cached_train, validation_data=cached_test,
-        validation_freq=5, epochs=3)
-
-train_accuracy = model.evaluate(
-    train, return_dict=True)["factorized_top_k/top_100_categorical_accuracy"]
-test_accuracy = model.evaluate(
-    test, return_dict=True)["factorized_top_k/top_100_categorical_accuracy"]
-
-print(f"Top-100 accuracy (train): {train_accuracy:.2f}.")
-print(f"Top-100 accuracy (test): {test_accuracy:.2f}.")
 
 
+def run_models(use_cross_layer, deep_layer_sizes, projection_dim=None, num_runs=5):
+  models = []
+  rmses = []
+
+  for i in range(num_runs):
+    model = DCN(use_cross_layer=use_cross_layer,
+                deep_layer_sizes=deep_layer_sizes,
+                projection_dim=projection_dim)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate))
+    models.append(model)
+
+    model.fit(cached_train, epochs=epochs, verbose=False)
+    metrics = model.evaluate(cached_test, return_dict=True)
+    rmses.append(metrics["RMSE"])
+
+  mean, stdv = np.average(rmses), np.std(rmses)
+
+  return {"model": models, "mean": mean, "stdv": stdv}
+
+epochs = 8
+learning_rate = 0.01
+
+dcn_result = run_models(use_cross_layer=True,
+                        deep_layer_sizes=[192, 192])
 
 
 
+dcn_lr_result = run_models(use_cross_layer=True,
+                           projection_dim=20,
+                           deep_layer_sizes=[192, 192])
+
+dnn_result = run_models(use_cross_layer=False,
+                        deep_layer_sizes=[192, 192, 192])
+
+
+print("DCN            RMSE mean: {:.4f}, stdv: {:.4f}".format(
+    dcn_result["mean"], dcn_result["stdv"]))
+print("DCN (low-rank) RMSE mean: {:.4f}, stdv: {:.4f}".format(
+    dcn_lr_result["mean"], dcn_lr_result["stdv"]))
+print("DNN            RMSE mean: {:.4f}, stdv: {:.4f}".format(
+    dnn_result["mean"], dnn_result["stdv"]))
+
+
+
+model = dcn_result["model"][0]
+mat = model._cross_layer._dense.kernel
+features = model._all_features
+
+block_norm = np.ones([len(features), len(features)])
+
+dim = model.embedding_dimension
+
+# Compute the norms of the blocks.
+for i in range(len(features)):
+  for j in range(len(features)):
+    block = mat[i * dim:(i + 1) * dim,
+                j * dim:(j + 1) * dim]
+    block_norm[i,j] = np.linalg.norm(block, ord="fro")
+
+plt.figure(figsize=(9,9))
+im = plt.matshow(block_norm, cmap=plt.cm.Blues)
+ax = plt.gca()
+divider = make_axes_locatable(plt.gca())
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(im, cax=cax)
+cax.tick_params(labelsize=10) 
+_ = ax.set_xticklabels([""] + features, rotation=45, ha="left", fontsize=10)
+_ = ax.set_yticklabels([""] + features, fontsize=10)
+plt.show()
