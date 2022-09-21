@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
 import os
-os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+#os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 #dtype = torch.float
 #device = 
