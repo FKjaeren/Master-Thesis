@@ -35,6 +35,7 @@ class CreateDataset(Dataset):
         features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int, device=self.device)
         idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int, device = self.device)
         all_data = torch.cat((idx_variable, features), dim = 1)
+        print("device of dataset is: ",all_data.device)
         return all_data[row]
     def shape(self):
         shape_value = self.all_data.shape
