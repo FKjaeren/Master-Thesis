@@ -5,10 +5,18 @@ import os
 from typing import Dict, Text
 import pprint
 
+
+import matplotlib.pyplot as plt
+
 import numpy as np
 import tensorflow as tf
 
 import tensorflow_recommenders as tfrs
+
+plt.style.use('seaborn-whitegrid')
+import numpy as np
+import tensorflow as tf
+
 import warnings
 warnings.filterwarnings("ignore")
 data_path = 'Data/Raw/'
@@ -43,7 +51,7 @@ X = X.merge(df_c[['customer_id','age']], how = 'left', on = 'customer_id')
 
 
 
-interactions_dict = X[["customer_id", "age", "prod_name", "colour_group_name", "product_group_name"]]
+interactions_dict = X[["customer_id", "age", "prod_name", "colour_group_name", "product_group_name"]].astype(str)
 
 interactions_dict = {name: np.array(value) for name, value in interactions_dict.items()}
 interactions = tf.data.Dataset.from_tensor_slices(interactions_dict)
@@ -66,6 +74,8 @@ interactions = interactions.map(lambda x: {
 articles = articles.map(lambda x: (x['prod_name']))
 
 
+for x in articles.take(100).as_numpy_iterator():
+  pprint.pprint(x)
 u_articles = np.unique(np.concatenate(list(articles.batch(1_000))))
 u_customer = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["customer_id"]))))
 u_age = np.unique(np.concatenate(list(interactions.batch(1_000).map(lambda x: x["age"]))))
@@ -104,22 +114,51 @@ class UserModel(tf.keras.Model):
 
 
   def call(self, inputs):
-    return tf.concat([
-        self.user_embedding(inputs["customer_id"]),
-        self.age_embedding(inputs["age"]),
-        self.colour_embedding(inputs["colour_group_name"]),
-        self.prod_group_embedding(inputs["product_group_name"]),
+    #return tf.concat([
+    return self.user_embedding(inputs["customer_id"])
+        #self.age_embedding(inputs["age"]),
+        #self.colour_embedding(inputs["colour_group_name"]),
+        #self.prod_group_embedding(inputs["product_group_name"]),
         #tf.reshape(self.normalized_timestamp(inputs["timestamp"]), (-1, 1)),
-    ], axis=1)
+    #], axis=1)
 
+class QueryModel(tf.keras.Model):
+  """Model for encoding user queries."""
 
+  def __init__(self, layer_sizes):
+    """Model for encoding user queries.
+
+    Args:
+      layer_sizes:
+        A list of integers where the i-th entry represents the number of units
+        the i-th layer contains.
+    """
+    super().__init__()
+
+    # We first use the user model for generating embeddings.
+    self.embedding_model = UserModel()
+
+    # Then construct the layers.
+    self.dense_layers = tf.keras.Sequential()
+
+    # Use the ReLU activation for all but the last layer.
+    for layer_size in layer_sizes[:-1]:
+      self.dense_layers.add(tf.keras.layers.Dense(layer_size, activation="relu"))
+
+    # No activation for the last layer.
+    for layer_size in layer_sizes[-1:]:
+      self.dense_layers.add(tf.keras.layers.Dense(layer_size))
+
+  def call(self, inputs):
+    feature_embedding = self.embedding_model(inputs)
+    return self.dense_layers(feature_embedding)
 
 class MovieModel(tf.keras.Model):
 
   def __init__(self):
     super().__init__()
 
-    max_tokens = 10_000
+    #max_tokens = 10_000
 
     self.title_embedding = tf.keras.Sequential([
       tf.keras.layers.StringLookup(
@@ -144,7 +183,60 @@ class MovieModel(tf.keras.Model):
        # self.title_text_embedding(titles),
     #], axis=1)
 
+class CandidateModel(tf.keras.Model):
+  """Model for encoding movies."""
 
+  def __init__(self, layer_sizes):
+    """Model for encoding movies.
+
+    Args:
+      layer_sizes:
+        A list of integers where the i-th entry represents the number of units
+        the i-th layer contains.
+    """
+    super().__init__()
+
+    self.embedding_model = MovieModel()
+
+    # Then construct the layers.
+    self.dense_layers = tf.keras.Sequential()
+
+    # Use the ReLU activation for all but the last layer.
+    for layer_size in layer_sizes[:-1]:
+      self.dense_layers.add(tf.keras.layers.Dense(layer_size, activation="relu"))
+
+    # No activation for the last layer.
+    for layer_size in layer_sizes[-1:]:
+      self.dense_layers.add(tf.keras.layers.Dense(layer_size))
+
+  def call(self, inputs):
+    feature_embedding = self.embedding_model(inputs)
+    return self.dense_layers(feature_embedding)
+
+
+class MovielensModel(tfrs.models.Model):
+
+  def __init__(self, layer_sizes):
+    super().__init__()
+    self.query_model = QueryModel(layer_sizes)
+    self.candidate_model = CandidateModel(layer_sizes)
+    self.task = tfrs.tasks.Retrieval(
+        metrics=tfrs.metrics.FactorizedTopK(
+            candidates=articles.batch(64).map(self.candidate_model),
+        ),
+    )
+
+  def compute_loss(self, features, training=False):
+    # We only pass the user id and timestamp features into the query model. This
+    # is to ensure that the training inputs would have the same keys as the
+    # query inputs. Otherwise the discrepancy in input structure would cause an
+    # error when loading the query model after saving it.
+    query_embeddings = self.query_model({
+        "customer_id": features["customer_id"]
+    })
+    movie_embeddings = self.candidate_model(features["prod_name"])
+
+    return self.task(query_embeddings, movie_embeddings, compute_metrics=not training)
 
 class MovielensModel(tfrs.models.Model):
 
@@ -190,10 +282,51 @@ cached_train = train.shuffle(100_000).batch(2048)
 cached_test = test.batch(4096).cache()
 
 
-model = MovielensModel()
+model = MovielensModel([64, 32])
 model.compile(optimizer=tf.keras.optimizers.Adagrad(0.1))
 
-model.fit(cached_train, epochs=3)
+one_layer_history = model.fit(
+    cached_train,
+    validation_data=cached_test,
+    validation_freq=5,
+    epochs=10,
+    verbose=0)
+
+accuracy = one_layer_history.history["val_factorized_top_k/top_100_categorical_accuracy"][-1]
+print(f"Top-100 accuracy: {accuracy:.2f}.")
+
+
+num_validation_runs = len(one_layer_history.history["val_factorized_top_k/top_100_categorical_accuracy"])
+epochs = [(x + 1)* 5 for x in range(num_validation_runs)]
+
+plt.plot(epochs, one_layer_history.history["val_factorized_top_k/top_100_categorical_accuracy"], label="1 layer")
+#plt.plot(epochs, two_layer_history.history["val_factorized_top_k/top_100_categorical_accuracy"], label="2 layers")
+plt.title("Accuracy vs epoch")
+plt.xlabel("epoch")
+plt.ylabel("Top-100 accuracy");
+plt.legend()
+plt.show()
+
+
+
+model = MovielensModel([128, 64, 32])
+model.compile(optimizer=tf.keras.optimizers.Adagrad(0.1))
+
+three_layer_history = model.fit(
+    cached_train,
+    validation_data=cached_test,
+    validation_freq=5,
+    epochs=3,
+    verbose=0)
+
+accuracy = three_layer_history.history["val_factorized_top_k/top_100_categorical_accuracy"][-1]
+print(f"Top-100 accuracy: {accuracy:.2f}.")
+
+
+
+
+
+model.fit(cached_train, epochs=10)
 
 train_accuracy = model.evaluate(
     cached_train, return_dict=True)["factorized_top_k/top_100_categorical_accuracy"]
