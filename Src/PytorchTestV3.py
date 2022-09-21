@@ -102,8 +102,16 @@ class RecSysModel(torch.nn.Module):
         department_embedding = self.department_embedding(Customer_data[:,4])
         customer_embedding_final = torch.cat((customer_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
+        product_embedding = self.product_embedding(self.All_Products[:,0])
+        price_embedding = self.price_embedding(self.All_Products[:,1])
+        age_embedding = self.age_embedding(self.All_Products[:,2])
+        colour_embedding = self.colour_embedding(self.All_Products[:,3])
+        department_embedding = self.department_embedding(self.All_Products[:,4])
+        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
-        matrixfactorization = torch.matmul((customer_embedding_final), torch.t(self.product_embedding_final))
+
+
+        matrixfactorization = torch.matmul((customer_embedding_final), torch.t(product_embedding_final))
         recommendations, indexes = torch.topk(matrixfactorization, k = k)
         return recommendations, indexes
 
