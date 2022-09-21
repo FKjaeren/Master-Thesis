@@ -279,7 +279,7 @@ for epoch in range(1,num_epochs+1):
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 PATH = 'Models/Baseline_MulitDim_model.pth'
-torch.save(best_model, PATH)
+#torch.save(best_model, PATH)
 
 #prof.stop()
 print("finished training")
