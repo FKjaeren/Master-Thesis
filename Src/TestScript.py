@@ -31,7 +31,7 @@ class CreateDataset(Dataset):
 
 model = (torch.load(PATH))
 all_products = pd.read_csv('Data/Raw/articles.csv')
-num_products = all_products['prod_name'].nunique()
+num_products = all_products['article_id'].nunique()
 
 
 """
@@ -57,25 +57,34 @@ model.load_weights(latest)
 ## Load model forsøg 2 
 #path = 'Models/BaselineModelIteration2'
 # model = tf.saved_model.load(path)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 batch_size = 1024
 
 test_dataset = pd.read_csv('Data/Preprocessed/test_final.csv')
-product_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
-customer_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+test_dataset = test_dataset[0:100000]
+product_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device = device)
+customer_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
 
 product_test_loader = torch.utils.data.DataLoader(product_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
 customer_test_loader = torch.utils.data.DataLoader(customer_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+
+
 total_accuracy = []
 model.eval()
 label_products_init = torch.zeros(num_products, batch_size)
+output_product_init = torch.zeros(num_products, batch_size)
 for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_test_dataset.shape()[0]),product_test_loader,customer_test_loader):
     product_id = product_data_batch[:,0].type(torch.long)
     label_products_init[product_id] = 1
-    outputs = model.CustomerItemRecommendation(customer_data_batch)
-    print(outputs)
+    _,outputs = model.CustomerItemRecommendation(customer_data_batch,1)
+
+    print(outputs.shape)
+    print(product_id.shape)
     output = torch.squeeze(outputs, 1)
-    accuracy = np.sum(np.abs(output-label_products_init))
+    output_product_init[(outputs).view(batch_size,1)] = 1
+
+    accuracy = np.sum(np.abs(output_product_init-label_products_init).numpy(), axis = 0)
     total_accuracy.append(accuracy)
     break
 
