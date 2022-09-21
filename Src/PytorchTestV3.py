@@ -13,20 +13,27 @@ import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
 
 
+#dtype = torch.float
+#device = 
+#device = torch.device("mps")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("mps")
+
 class CreateDataset(Dataset):
-    def __init__(self, dataset, features, idx_variable):
+    def __init__(self, dataset, features, idx_variable, device):
 
         self.id = idx_variable
         self.features = features
         self.all_data = dataset
+        self.device = device
 
     def __len__(self):
         return len(self.all_data)
 
     def __getitem__(self, row):
 
-        features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int)
-        idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int)
+        features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int, device=self.device)
+        idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int, device = self.device)
         all_data = torch.cat((idx_variable, features), dim = 1)
         return all_data[row]
     def shape(self):
@@ -34,8 +41,9 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111):
+    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111, device = device):
         super().__init__()
+        self.device = device
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
         self.num_customers = n_customers
@@ -44,12 +52,12 @@ class RecSysModel(torch.nn.Module):
         self.num_ages = n_ages
         self.num_colours = n_colours
         self.num_departments = n_departments
-        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim)        
-        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim)
-        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim)
-        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim)
-        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim)
-        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim)
+        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim, device = device)        
+        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim, device = device)
+        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim, device = device)
+        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim, device = device)
+        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim, device = device)
+        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim, device = device)
 
 
         self.All_Products = Products_data
@@ -62,6 +70,7 @@ class RecSysModel(torch.nn.Module):
         return {'rmse':np.sqrt(metrics.mean_squared_error(target, output))}
 
     def forward(self, Customer_data, Product_data):
+        device = self.device
         customer_embedding = self.customer_embedding(Customer_data[:,0])
         price_embedding = self.price_embedding(Customer_data[:,1])
         age_embedding = self.age_embedding(Customer_data[:,2])
@@ -158,7 +167,7 @@ test_dataset['colour_group_name'] = Colour_Encoder.transform(test_dataset[['colo
 test_dataset['department_name'] = Department_encoder.transform(test_dataset[['department_name']].to_numpy().reshape(-1, 1))
 test_dataset['age'] = Age_encoder.transform(test_dataset[['age']].to_numpy().reshape(-1,1))
 
-test_dataset.to_csv('Data/Preprocessed/test_final.csv',index=False)
+#test_dataset.to_csv('Data/Preprocessed/test_final.csv',index=False)
 
 #Product_data['colour_group_name'] = Colour_Encoder.transform(Product_data[['colour_group_name']].to_numpy().reshape(-1, 1))
 #Product_data['department_name'] = Department_encoder.transform(Product_data[['department_name']].to_numpy().reshape(-1, 1))
@@ -179,22 +188,23 @@ Customer_data['department_name'] = Department_encoder.transform(Customer_data[['
 Customer_data['price'] = Customer_data['price'].round(decimals=4)
 Customer_data['price'] = Price_encoder.transform(Customer_data[['price']].to_numpy().reshape(-1,1))
 
-customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
+product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'], device = device)
 
 
-product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
-customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
-customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device = device)
+customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
+product_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device=device)
+customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
 
 batch_size = 1024
 embedding_dim = 64
-model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products,n_customers=num_customers, n_prices=num_prices, n_colours=num_colours, n_departments=num_departments)
+model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products,
+                    n_customers=num_customers, n_prices=num_prices, n_colours=num_colours, n_departments=num_departments, device = device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 
 loss_fn = torch.nn.CrossEntropyLoss()
-num_epochs = 3
+num_epochs = 1
 
 
 #Training in batches:
@@ -206,7 +216,7 @@ customer_valid_loader = torch.utils.data.DataLoader(customer_valid_dataset, batc
 
 #Num_classes = len(Product_data['product_id'])
 dataiter = iter(product_train_loader)
-dataset = dataiter.next()
+dataset = next(dataiter)
 
 
 #prof = torch.profiler.profile(
@@ -261,7 +271,7 @@ for epoch in range(1,num_epochs+1):
         loss = loss_fn(output,product_id)
         epoch_valid_loss.append(loss.item())
         if(batch % 10 == 0):
-            print(' Valid batch {} loss: {}'.format(i, np.mean(epoch_valid_loss)))
+            print(' Valid batch {} loss: {}'.format(batch, np.mean(epoch_valid_loss)))
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
