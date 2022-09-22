@@ -78,12 +78,13 @@ output_product_init = torch.zeros(num_products, batch_size)
 for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_test_dataset.shape()[0]),product_test_loader,customer_test_loader):
     product_id = product_data_batch[:,0].type(torch.long)
     label_products_init[product_id] = 1
-    _,outputs = model.CustomerItemRecommendation(customer_data_batch,1)
+    test = (torch.nn.functional.one_hot(product_id, num_products))
+    values,outputs, probabilities = model.CustomerItemRecommendation(customer_data_batch,1)
 
     output = torch.squeeze(outputs, 1)
     #output_product_init[(outputs).view(batch_size,1)] = 1
 
-    Precision_score = average_precision_score(label_products_init,outputs)
+    Precision_score = average_precision_score(test,probabilities.detach().numpy())
     total_Precision_score.append(Precision_score)
     break
 
