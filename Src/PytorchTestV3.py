@@ -173,6 +173,8 @@ valid_dataset['product_id'] = Product_Encoder.transform(valid_df.article_id.valu
 valid_dataset['colour_group_name'] = Colour_Encoder.transform(valid_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 valid_dataset['department_name'] = Department_encoder.transform(valid_dataset[['department_name']].to_numpy().reshape(-1, 1))
 valid_dataset['age'] = Age_encoder.transform(valid_dataset[['age']].to_numpy().reshape(-1,1))
+valid_dataset['price'] = Price_encoder.transform(valid_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
+
 
 test_dataset = copy.deepcopy(test_df)
 test_dataset.customer_id = Customer_id_Encoder.transform(test_df.customer_id.values)
@@ -180,6 +182,7 @@ test_dataset['product_id'] = Product_Encoder.transform(test_df.article_id.values
 test_dataset['colour_group_name'] = Colour_Encoder.transform(test_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 test_dataset['department_name'] = Department_encoder.transform(test_dataset[['department_name']].to_numpy().reshape(-1, 1))
 test_dataset['age'] = Age_encoder.transform(test_dataset[['age']].to_numpy().reshape(-1,1))
+test_dataset['price'] = Price_encoder.transform(test_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
 
 #test_dataset.to_csv('Data/Preprocessed/test_final.csv',index=False)
 
