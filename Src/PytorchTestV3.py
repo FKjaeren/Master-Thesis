@@ -1,4 +1,5 @@
 import torch
+import platform
 #import torchvision
 from torch import nn
 import torch.nn.functional as F
@@ -16,9 +17,17 @@ import os
 
 #dtype = torch.float
 #device = 
-device = torch.device("mps")
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("mps")
+OS = platform.system()
+if(OS == 'Darwin'):
+    device = torch.device("cpu")
+    #device = torch.device("mps")
+elif(OS == "Windows"):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+elif(OS == "Linux"):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+else:
+    print('The operating system is not reconized, therefore we could not set device type :(')
+
 class CreateDataset(Dataset):
     def __init__(self, dataset, features, idx_variable):
 
