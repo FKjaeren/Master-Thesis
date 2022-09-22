@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn import preprocessing, metrics
 import numpy as np
 import copy
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, TensorDataset
 import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
 import os
@@ -29,12 +29,12 @@ else:
     print('The operating system is not reconized, therefore we could not set device type :(')
 
 class CreateDataset(Dataset):
-    def __init__(self, dataset, features, idx_variable):
+    def __init__(self, dataset):#, features, idx_variable):
 
-        self.id = idx_variable
-        self.features = features
+        #self.id = idx_variable
+        #self.features = features
         self.all_data = dataset
-        self.device = device
+        #self.device = device
 
     def __len__(self):
         return len(self.all_data)
@@ -42,13 +42,13 @@ class CreateDataset(Dataset):
     def __getitem__(self, row):
         #print("Før feature og ind til device ")
 
-        features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int)#, device=self.device)
-        idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int)#, device = self.device)
+        #features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int)#, device=self.device)
+        #idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int)#, device = self.device)
         #print("Hej ", idx_variable.device)
-        all_data = torch.cat((idx_variable, features), dim = 1)
+        #all_data = torch.cat((idx_variable, features), dim = 1)
         #all_data = all_data.to(self.device)
         #print("device of dataset is: ",all_data.device)
-        return all_data[row]
+        return self.all_data[row]
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
@@ -116,22 +116,22 @@ class RecSysModel(torch.nn.Module):
         department_embedding = self.department_embedding(self.All_Products[:,4])
         product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
 
-
-
         matrixfactorization = torch.matmul((customer_embedding_final), torch.t(product_embedding_final))
         recommendations, indexes = torch.topk(matrixfactorization, k = k)
-        return recommendations, indexes
+        return recommendations, indexes, matrixfactorization
 
 
-train_df = pd.read_csv('Data/Preprocessed/TrainData_enriched.csv')
+train_df = pd.read_csv('Data/Preprocessed/TrainData_enriched_subset.csv')
 #train_df = train_df.iloc[0:100000]
-valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched.csv')
-test_df = pd.read_csv('Data/Preprocessed/TestData_enriched.csv')
+valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched_subset.csv')
+#test_df = pd.read_csv('Data/Preprocessed/TestData_enriched.csv')
+#valid_df = valid_df.iloc[0:50000]
+
 
 Customer_data = pd.read_csv('Data/Preprocessed/Customers_enriched.csv')
 Product_data = pd.read_csv('Data/Preprocessed/Products_enriched.csv')
 
-train_df = train_df.iloc[0:100000]
+
 
 all_customers = pd.read_csv('Data/Raw/customers.csv')
 all_products = pd.read_csv('Data/Raw/articles.csv')
@@ -144,7 +144,7 @@ max_age = 110
 
 
 Customer_id_Encoder = preprocessing.LabelEncoder().fit(all_customers['customer_id'])
-Product_Encoder = preprocessing.LabelEncoder().fit(all_products['article_id'])
+Product_Encoder = preprocessing.OrdinalEncoder().fit(all_products[['article_id']])
 Customer_data['customer_id'] = Customer_id_Encoder.transform(Customer_data['customer_id'])
 #Product_data['article_id'] = Product_Encoder.transform(Product_data['article_id'])
 #Product_data = Product_data.drop(columns=['prod_name'], axis = 1)
@@ -164,33 +164,33 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 train_dataset = copy.deepcopy(train_df)
 train_dataset['price'] = train_dataset['price'].round(decimals=4)
 train_dataset.customer_id = Customer_id_Encoder.transform(train_df.customer_id.values)
-train_dataset['product_id'] = Product_Encoder.transform(train_df.article_id.values)
+train_dataset['article_id'] = Product_Encoder.transform(train_df.article_id.values)
 train_dataset['colour_group_name'] = Colour_Encoder.transform(train_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 train_dataset['department_name'] = Department_encoder.transform(train_dataset[['department_name']].to_numpy().reshape(-1, 1))
 train_dataset['age'] = Age_encoder.transform(train_dataset[['age']].to_numpy().reshape(-1,1))
 train_dataset['price'] = Price_encoder.transform(train_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
+train_dataset = train_dataset.drop(['prod_name','sales_channel_id'], axis = 1)
 
-
-
-valid_df = valid_df[0:100000]
 
 valid_dataset = copy.deepcopy(valid_df)
 valid_dataset.customer_id = Customer_id_Encoder.transform(valid_df.customer_id.values)
-valid_dataset['product_id'] = Product_Encoder.transform(valid_df.article_id.values)
+valid_dataset['article_id'] = Product_Encoder.transform(valid_df.article_id.values)
 valid_dataset['colour_group_name'] = Colour_Encoder.transform(valid_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 valid_dataset['department_name'] = Department_encoder.transform(valid_dataset[['department_name']].to_numpy().reshape(-1, 1))
 valid_dataset['age'] = Age_encoder.transform(valid_dataset[['age']].to_numpy().reshape(-1,1))
 valid_dataset['price'] = Price_encoder.transform(valid_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
+valid_dataset = valid_dataset.drop(['prod_name','sales_channel_id'], axis = 1)
 
-
+"""
 test_dataset = copy.deepcopy(test_df)
 test_dataset.customer_id = Customer_id_Encoder.transform(test_df.customer_id.values)
-test_dataset['product_id'] = Product_Encoder.transform(test_df.article_id.values)
+test_dataset['article_id'] = Product_Encoder.transform(test_df.article_id.values)
 test_dataset['colour_group_name'] = Colour_Encoder.transform(test_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 test_dataset['department_name'] = Department_encoder.transform(test_dataset[['department_name']].to_numpy().reshape(-1, 1))
 test_dataset['age'] = Age_encoder.transform(test_dataset[['age']].to_numpy().reshape(-1,1))
 test_dataset['price'] = Price_encoder.transform(test_dataset[['price']].to_numpy().reshape(-1,1)).astype(int)
-
+test_dataset = test_dataset.drop(['prod_name','sales_channel_id'], axis = 1)
+"""
 #test_dataset.to_csv('Data/Preprocessed/test_final.csv',index=False)
 
 #Product_data['colour_group_name'] = Colour_Encoder.transform(Product_data[['colour_group_name']].to_numpy().reshape(-1, 1))
@@ -200,8 +200,10 @@ Product_data['age'] = Product_data['age'].round(decimals = 0)
 Product_data['age'] = Age_encoder.transform(Product_data[['age']].to_numpy().reshape(-1,1))
 Product_data['price'] = Product_data['price'].round(decimals=4)
 Product_data['price'] = Price_encoder.transform(Product_data[['price']].to_numpy().reshape(-1,1))
+Product_data = Product_data.drop(['sales_channel_id'],axis = 1)
 
-train_dataset = train_dataset[['customer_id','product_id','age','price','colour_group_name','department_name']]
+
+#train_dataset = train_dataset[['customer_id','product_id','age','price','colour_group_name','department_name']]
 
 Customer_data['colour_group_name'] = Customer_data['max_colour'].str.replace('colour_group_name_','')
 Customer_data['department_name'] = Customer_data['max_department'].str.replace('department_name_','')
@@ -211,15 +213,34 @@ Customer_data['colour_group_name'] = Colour_Encoder.transform(Customer_data[['co
 Customer_data['department_name'] = Department_encoder.transform(Customer_data[['department_name']].to_numpy().reshape(-1, 1))
 Customer_data['price'] = Customer_data['price'].round(decimals=4)
 Customer_data['price'] = Price_encoder.transform(Customer_data[['price']].to_numpy().reshape(-1,1))
+Customer_data = Customer_data.drop(['sales_channel_id'],axis = 1)
 
-customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+Customer_data_tensor = torch.tensor(Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+Product_data_tensor = torch.tensor(Product_data[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+customer_train_tensor = torch.tensor(train_dataset[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+product_train_tensor = torch.tensor(train_dataset[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+
+customer_valid_tensor = torch.tensor(valid_dataset[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+product_valid_tensor = torch.tensor(valid_dataset[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+
+"""
+customer_dataset = TensorDataset(Customer_data_tensor)
+product_dataset = TensorDataset(Product_data_tensor)
+product_train_dataset = TensorDataset(product_train_tensor)
+customer_train_dataset = TensorDataset(customer_train_tensor)
+product_valid_dataset = TensorDataset(customer_valid_tensor)
+customer_valid_dataset = TensorDataset(customer_valid_tensor)
+
+"""
+customer_dataset = CreateDataset(Customer_data_tensor)#,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
 
-product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
-customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
-customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_train_dataset = CreateDataset(product_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+customer_train_dataset = CreateDataset(customer_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+
 
 batch_size = 1024
 embedding_dim = 64
@@ -259,8 +280,9 @@ for epoch in range(1,num_epochs+1):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     # Every data instance is an input + label pair
-    for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_train_dataset.shape()[0]),product_train_loader,customer_train_loader):
+    for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_train_tensor.shape[0]),product_train_loader,customer_train_loader):
         #product_id = product_id.view(batch_size,1)
+        #print(product_data_batch)
         product_id = product_data_batch[:,0]
         product_id = product_id.type(torch.long)
         # Zero your gradients for every batch!
@@ -288,7 +310,7 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     model.eval()
     epoch_valid_loss = []
-    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,product_valid_dataset.shape()[0]), product_valid_loader, customer_valid_loader):
+    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,product_train_tensor.shape[0]), product_valid_loader, customer_valid_loader):
         product_id = product_data_batch_valid[:,0].type(torch.long)
         outputs = model(customer_data_batch_valid, product_data_batch_valid)
         output = torch.squeeze(outputs, 1)
@@ -302,10 +324,12 @@ for epoch in range(1,num_epochs+1):
         best_model = model
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
-PATH = 'Models/Baseline_MulitDim_model.pth'
-torch.save(best_model, PATH)
+#PATH = 'Models/Baseline_MulitDim_model.pth'
+#torch.save(best_model, PATH)
 
 #prof.stop()
+
+"""
 print("finished training")
 print("Loss list = ", Loss_list)
 
@@ -314,3 +338,12 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Training graph')
 plt.show()
+
+with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
+   with record_function("model_inference"):
+      model(customer_data_batch_valid, product_data_batch_valid)
+
+print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+
+print(prof.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=30))
+"""
