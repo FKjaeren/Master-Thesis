@@ -6,6 +6,7 @@ import torch
 #from PytorchTestV3 import RecSysModel
 #from PytorchTestV3 import CreateDataset
 from torch.utils.data import Dataset
+from sklearn.metrics import average_precision_score
 
 PATH = 'Models/Baseline_MulitDim_model.pth'
 
@@ -63,14 +64,14 @@ batch_size = 1024
 
 test_dataset = pd.read_csv('Data/Preprocessed/test_final.csv')
 test_dataset = test_dataset[0:100000]
-product_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device = device)
-customer_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
+product_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
+customer_test_dataset = CreateDataset(test_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
 product_test_loader = torch.utils.data.DataLoader(product_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
 customer_test_loader = torch.utils.data.DataLoader(customer_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
 
-total_accuracy = []
+total_Precision_score = []
 model.eval()
 label_products_init = torch.zeros(num_products, batch_size)
 output_product_init = torch.zeros(num_products, batch_size)
@@ -79,18 +80,16 @@ for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_test_da
     label_products_init[product_id] = 1
     _,outputs = model.CustomerItemRecommendation(customer_data_batch,1)
 
-    print(outputs.shape)
-    print(product_id.shape)
     output = torch.squeeze(outputs, 1)
-    output_product_init[(outputs).view(batch_size,1)] = 1
+    #output_product_init[(outputs).view(batch_size,1)] = 1
 
-    accuracy = np.sum(np.abs(output_product_init-label_products_init).numpy(), axis = 0)
-    total_accuracy.append(accuracy)
+    Precision_score = average_precision_score(label_products_init,outputs)
+    total_Precision_score.append(Precision_score)
     break
 
 
 
 
-print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
+#print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
 
-print("Recs for item {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))
+#print("Recs for item {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))

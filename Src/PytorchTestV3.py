@@ -16,11 +16,11 @@ import os
 
 #dtype = torch.float
 #device = 
-#device = torch.device("mps")
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("mps")
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #device = torch.device("mps")
 class CreateDataset(Dataset):
-    def __init__(self, dataset, features, idx_variable, device):
+    def __init__(self, dataset, features, idx_variable):
 
         self.id = idx_variable
         self.features = features
@@ -45,7 +45,7 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111, device = device):
+    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
@@ -202,19 +202,19 @@ Customer_data['department_name'] = Department_encoder.transform(Customer_data[['
 Customer_data['price'] = Customer_data['price'].round(decimals=4)
 Customer_data['price'] = Price_encoder.transform(Customer_data[['price']].to_numpy().reshape(-1,1))
 
-customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
-product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'], device = device)
+customer_dataset = CreateDataset(Customer_data,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_dataset = CreateDataset(Product_data, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
 
-product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device = device)
-customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
-product_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'], device=device)
-customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'], device = device)
+product_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
+customer_train_dataset = CreateDataset(train_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+product_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['product_id'])
+customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
 batch_size = 1024
 embedding_dim = 64
 model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products+1,
-                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1, device = device)
+                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -297,7 +297,7 @@ for epoch in range(1,num_epochs+1):
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 PATH = 'Models/Baseline_MulitDim_model.pth'
-#torch.save(best_model, PATH)
+torch.save(best_model, PATH)
 
 #prof.stop()
 print("finished training")
