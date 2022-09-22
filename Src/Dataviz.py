@@ -40,6 +40,18 @@ plt.setp(ax.get_xticklabels(), rotation=90)
 plt.show()
 # We could display in % sold instead of total
 
+
+# popular departments
+pivot2 = pd.pivot_table(df_sold, index= ["department_name"], values='sold_count', aggfunc=np.sum)
+pivot2 = pivot2.reset_index()
+pivot2 = pivot2.sort_values("sold_count", ascending=False)
+
+ax = sns.barplot(x="department_name", y="sold_count", data=pivot2.iloc[0:29])
+plt.setp(ax.get_xticklabels(), rotation=90)
+plt.show()
+
+
+
 # Popular color?
 
 pivot = pd.pivot_table(top500, index= ["colour_group_name"], values='sold_count', aggfunc=np.sum)
@@ -102,3 +114,13 @@ plt.show()
 
 c_df = pd.merge(df_t, df_c.drop("postal_code", axis=1), on='customer_id', how='inner')
 c_df['age_groups'] = pd.cut(c_df['age'], bins=[16, 20, 30, 50, 70,99], labels = ['teen' , 'young' , 'middle-aged' , 'senior', 'old'])
+
+# We want as many features describing how the customer relationships are. Both from the differnet customers and the differnet articles.
+#dep, price, artice, cus id colour age features
+sns.histplot(data=df_t, x="price",  binwidth = 1)
+set(xlim=(0,100))
+plt.show()
+
+
+
+
