@@ -45,7 +45,7 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111):
+    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111,device=device):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
@@ -56,15 +56,15 @@ class RecSysModel(torch.nn.Module):
         self.num_ages = n_ages
         self.num_colours = n_colours
         self.num_departments = n_departments
-        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim)#, device = device)        
-        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim)#, device = device)
-        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim)#, device = device)
-        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim)#, device = device)
-        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim)#, device = device)
-        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim)#, device = device)
+        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim).to(device)    
+        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim).to(device)
+        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim).to(device)
+        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim).to(device)
+        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim).to(device)
+        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim).to(device)
 
 
-        self.All_Products = Products_data
+        self.All_Products = Products_data#.to(device)
 
         #self.out = nn.Linear(64,n_products+1)
 
@@ -75,22 +75,20 @@ class RecSysModel(torch.nn.Module):
 
     def forward(self, Customer_data, Product_data):
         device = self.device
+        All_products = self.All_Products[:,:].to(device)
         customer_embedding = self.customer_embedding(Customer_data[:,0])
         price_embedding = self.price_embedding(Customer_data[:,1])
         age_embedding = self.age_embedding(Customer_data[:,2])
         colour_embedding = self.colour_embedding(Customer_data[:,3])
         department_embedding = self.department_embedding(Customer_data[:,4])
-        customer_embedding_final = torch.cat((customer_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
-
-        product_embedding = self.product_embedding(self.All_Products[:,0])
-        price_embedding = self.price_embedding(self.All_Products[:,1])
-        age_embedding = self.age_embedding(self.All_Products[:,2])
-        colour_embedding = self.colour_embedding(self.All_Products[:,3])
-        department_embedding = self.department_embedding(self.All_Products[:,4])
-        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1)
-
-
-        output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final))
+        customer_embedding_final = torch.cat((customer_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1).to(device)
+        product_embedding = self.product_embedding(All_products[:,0])
+        price_embedding = self.price_embedding(All_products[:,1])
+        age_embedding = self.age_embedding(All_products[:,2])
+        colour_embedding = self.colour_embedding(All_products[:,3])
+        department_embedding = self.department_embedding(All_products[:,4])
+        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1).to(device)
+        output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final)).to(device)
         #calc_metrics = self.monitor_metrics(output,Product_data[:,0].view(1,-1))
         return output#, calc_metrics
 
@@ -217,7 +215,7 @@ customer_valid_dataset = CreateDataset(valid_dataset, features=['price','age','c
 batch_size = 1024
 embedding_dim = 64
 model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products+1,
-                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1)
+                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1,device=device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -234,7 +232,6 @@ customer_valid_loader = torch.utils.data.DataLoader(customer_valid_dataset, batc
 #Num_classes = len(Product_data['product_id'])
 dataiter = iter(product_train_loader)
 dataset = next(dataiter)
-
 
 #prof = torch.profiler.profile(
 #        schedule=torch.profiler.schedule(wait=0, warmup=0, active=3, repeat=2),
@@ -259,17 +256,14 @@ for epoch in range(1,num_epochs+1):
         product_id = product_id.type(torch.long)
         # Zero your gradients for every batch!
         optimizer.zero_grad()
-
-
         #
         customer_data_batch = customer_data_batch.to(device)
         product_data_batch = product_data_batch.to(device)
         # Make predictions for this batch
         outputs = model(customer_data_batch, product_data_batch)
         output = torch.squeeze(outputs, 1)
-
         # Compute the loss and its gradients
-        loss = loss_fn(output,product_id)
+        loss = loss_fn(output,product_id.to(device))
         loss.backward()
 
         # Adjust learning weights
