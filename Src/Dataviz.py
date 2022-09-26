@@ -96,6 +96,46 @@ axes[1,1].set_title("Autumn")
 fig.set_xticklabels(rotation=65, horizontalalignment='right')
 plt.show()
 
+################ 
+#Seasons plot 2
+
+
+
+c_df = pd.merge(df_t, df_c.drop("postal_code", axis=1), on='customer_id', how='inner')
+c_df['age_groups'] = pd.cut(c_df['age'], bins=[16, 20, 30, 50, 70,99], labels = ['teen' , 'young' , 'middle-aged' , 'senior', 'old'])
+# 4 plots with product type name in the seasons
+age_sea = c_df.groupby(['season' , 'age_groups'])\
+                .agg({'age_groups': 'count'}).rename(columns={'age_groups': 'qty'}).reset_index()
+
+
+fig, axes = plt.subplots(2, 2, figsize=(15, 10), sharey=True)
+fig.suptitle('Number from age_groups who bought in the seasons')
+
+# Winter
+Winter = age_sea.loc[age_sea['season'] == "Winter"].sort_values(by = 'qty', ascending = False)
+sns.barplot(ax=axes[0, 0], x=Winter.age_groups, y=Winter.qty)
+axes[0,0].set_title("Winter")
+
+# Spring
+Spring = age_sea.loc[age_sea['season'] == "Spring"].sort_values(by = 'qty', ascending = False)
+sns.barplot(ax=axes[0, 1], x=Spring.age_groups, y=Spring.qty)
+axes[0,1].set_title("Spring")
+
+# Summer
+Summer = age_sea.loc[age_sea['season'] == "Summer"].sort_values(by = 'qty', ascending = False)
+sns.barplot(ax=axes[1, 0], x=Summer.age_groups, y=Summer.qty)
+axes[1,0].set_title("Summer")
+
+# Autumn
+Autumn = age_sea.loc[age_sea['season'] == "Autumn"].sort_values(by = 'qty', ascending = False)
+
+sns.barplot(ax=axes[1, 1], x=Autumn.age_groups, y=Autumn.qty)
+
+axes[1,1].set_title("Autumn")
+fig.set_xticklabels(rotation=65, horizontalalignment='right')
+plt.show()
+
+
 # Er der nogen af aldersgrupperne der køber de samme ting?
 # Hvilke aldersgrupper køber mest?
 # Is membership a factor to buy special products or just more products. 
