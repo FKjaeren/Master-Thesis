@@ -164,7 +164,7 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 train_dataset = copy.deepcopy(train_df)
 train_dataset['price'] = train_dataset['price'].round(decimals=4)
 train_dataset.customer_id = Customer_id_Encoder.transform(train_df.customer_id.values)
-train_dataset['article_id'] = Product_Encoder.transform(train_df.article_id.values)
+train_dataset['article_id'] = Product_Encoder.transform(train_df[['article_id']])
 train_dataset['colour_group_name'] = Colour_Encoder.transform(train_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 train_dataset['department_name'] = Department_encoder.transform(train_dataset[['department_name']].to_numpy().reshape(-1, 1))
 train_dataset['age'] = Age_encoder.transform(train_dataset[['age']].to_numpy().reshape(-1,1))
@@ -174,7 +174,7 @@ train_dataset = train_dataset.drop(['prod_name','sales_channel_id'], axis = 1)
 
 valid_dataset = copy.deepcopy(valid_df)
 valid_dataset.customer_id = Customer_id_Encoder.transform(valid_df.customer_id.values)
-valid_dataset['article_id'] = Product_Encoder.transform(valid_df.article_id.values)
+valid_dataset['article_id'] = Product_Encoder.transform(valid_df[['article_id']])
 valid_dataset['colour_group_name'] = Colour_Encoder.transform(valid_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 valid_dataset['department_name'] = Department_encoder.transform(valid_dataset[['department_name']].to_numpy().reshape(-1, 1))
 valid_dataset['age'] = Age_encoder.transform(valid_dataset[['age']].to_numpy().reshape(-1,1))
@@ -184,7 +184,7 @@ valid_dataset = valid_dataset.drop(['prod_name','sales_channel_id'], axis = 1)
 """
 test_dataset = copy.deepcopy(test_df)
 test_dataset.customer_id = Customer_id_Encoder.transform(test_df.customer_id.values)
-test_dataset['article_id'] = Product_Encoder.transform(test_df.article_id.values)
+test_dataset['article_id'] = Product_Encoder.transform(test_df[['article_id']])
 test_dataset['colour_group_name'] = Colour_Encoder.transform(test_dataset[['colour_group_name']].to_numpy().reshape(-1, 1))
 test_dataset['department_name'] = Department_encoder.transform(test_dataset[['department_name']].to_numpy().reshape(-1, 1))
 test_dataset['age'] = Age_encoder.transform(test_dataset[['age']].to_numpy().reshape(-1,1))
@@ -238,18 +238,18 @@ product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','
 
 product_train_dataset = CreateDataset(product_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 customer_train_dataset = CreateDataset(customer_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+product_valid_dataset = CreateDataset(product_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
 
 batch_size = 1024
-embedding_dim = 64
+embedding_dim = 16
 model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products+1,
                     n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1,device=device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-num_epochs = 1
+num_epochs = 5
 
 
 #Training in batches:
@@ -324,21 +324,27 @@ for epoch in range(1,num_epochs+1):
         best_model = model
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
-#PATH = 'Models/Baseline_MulitDim_model.pth'
-#torch.save(best_model, PATH)
+
+"""
+PATH = 'Models/Baseline_MulitDim_model.pth'
+torch.save(best_model, PATH)
 
 #prof.stop()
 
-"""
+
 print("finished training")
 print("Loss list = ", Loss_list)
 
-plt.plot(np.arange(1,len(Loss_list)+1), Loss_list)
+plt.plot(np.arange(1,len(Loss_list)+1), Loss_list, label='Training loos')
+plt.plot(np.arange(1,len(Valid_Loss_list)+1), Valid_Loss_list, label = 'Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Training graph')
+plt.legend()
 plt.show()
+"""
 
+"""
 with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
    with record_function("model_inference"):
       model(customer_data_batch_valid, product_data_batch_valid)
