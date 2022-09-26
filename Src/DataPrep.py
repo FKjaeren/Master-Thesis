@@ -49,6 +49,8 @@ customer_df['postal_code'] = postal_code_Encoder.transform(customer_df[['postal_
 # we cannot use FN and Active. They have a lot of NaN values. We keep the rest
 df_c = customer_df[['customer_id','age', 'club_member_status', 'postal_code', 'fashion_news_frequency']]
 
+
+
 # Preprocess article dataframe
 articles_df = pd.read_csv(data_path+'articles.csv')
 
@@ -61,8 +63,42 @@ article_id_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_
 articles_df['article_id'] = article_id_Encoder.transform(articles_df[['article_id']].to_numpy().reshape(-1, 1))
 
 
-articles_df = articles_df.drop(columns=["index_name", "section_name", "product_group_name", "garment_group_name"], axis=1)
+articles_df = articles_df.drop(columns=["index_name", "section_name", "product_group_name", "garment_group_name", "perceived_colour_value_name", "perceived_colour_master_name"], axis=1)
 
+
+
+num_departments = articles_df['department_name'].nunique()
+num_colours = articles_df['colour_group_name'].nunique()
+num_prod_names = articles_df['prod_name'].nunique()
+num_prod_type_names = articles_df['product_type_name'].nunique()
+num_graphical = articles_df['graphical_appearance_name'].nunique()
+num_index = articles_df['index_group_name'].nunique()
+
+
+
+
+Colour_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_colours+1).fit(articles_df[['colour_group_name']].to_numpy().reshape(-1, 1))
+Department_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_departments+1).fit(articles_df[['department_name']].to_numpy().reshape(-1, 1))
+Prod_name_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prod_names+1).fit(articles_df[['prod_name']].to_numpy().reshape(-1, 1))
+Prod_type_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prod_type_names+1).fit(articles_df[['product_type_name']].to_numpy().reshape(-1, 1))
+Graphical_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_graphical+1).fit(articles_df[['graphical_appearance_name']].to_numpy().reshape(-1, 1))
+Index_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_index+1).fit(articles_df[['index_group_name']].to_numpy().reshape(-1, 1))
+
+
+
+
+
+articles_df['colour_group_name'] = Colour_Encoder.transform(articles_df[['colour_group_name']].to_numpy().reshape(-1, 1))
+articles_df['department_name'] = Department_encoder.transform(articles_df[['department_name']].to_numpy().reshape(-1, 1))
+articles_df['prod_name'] = Prod_name_encoder.transform(articles_df[['prod_name']].to_numpy().reshape(-1, 1))
+articles_df['product_type_name'] = Prod_type_encoder.transform(articles_df[['product_type_name']].to_numpy().reshape(-1, 1))
+articles_df['graphical_appearance_name'] = Graphical_encoder.transform(articles_df[['graphical_appearance_name']].to_numpy().reshape(-1, 1))
+articles_df['index_group_name'] = Index_encoder.transform(articles_df[['index_group_name']].to_numpy().reshape(-1, 1))
+
+
+
+
+articles_df[['article_id','prod_name','product_type_name','graphical_appearance_name','colour_group_name','department_name','index_group_name']].to_csv('Data/Preprocessed/article_df_numeric.csv',index=False)
 
 # From the articles we see several columns with the same information. section_name, product_group_name and garment_group_name gives almost the same information just with differnet headlines.
 # we can discard the garment_group_name and product_group_name and the number associated. 
@@ -72,17 +108,12 @@ articles_df = articles_df.drop(columns=["index_name", "section_name", "product_g
 
 
 
-
-# subset relevant columns
-df_a = articles_df[['article_id','product_code','product_type_no', 'prod_name', 'product_type_name', 'colour_group_name', 'department_name', 'section_name']]
-
-
-
-
-
-
 # check for NaN
-percent_a = (df_a.isnull().sum()/df_a.isnull().count()*100).sort_values(ascending = False)
+percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_values(ascending = False)
+
+
+
+
 
 # Preprocess transaction train dataframe
 transactions_df = pd.read_csv(data_path+'transactions_train.csv')
