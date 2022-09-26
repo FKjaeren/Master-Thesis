@@ -135,14 +135,6 @@ customer_aggregated = customer_aggregated.merge(customer_aggregated_extra, how =
 
 
 
-
-
-
-
-
-
-
-
 #######################
 
 
