@@ -220,14 +220,15 @@ Most_frequent_day = transactions_df.groupby('customer_id')['day'].apply(lambda x
 Most_frequent_month = transactions_df.groupby('customer_id')['month'].apply(lambda x: x.value_counts().index[0]).reset_index()
 Most_frequent_year = transactions_df.groupby('customer_id')['year'].apply(lambda x: x.value_counts().index[0]).reset_index()
 
-transactions_df_enriched = transactions_df.merge(articles_df, how = 'left', on = 'customer_id')
+transactions_df_enriched = transactions_df.merge(articles_df, how = 'left', on = 'article_id')
 
-Most_frequent_prod_name = transactions_df_enriched.groupby('article_id')['prod_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_product_type_name = transactions_df_enriched.groupby('article_id')['product_type_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_graphical_appearance_name = transactions_df_enriched.groupby('article_id')['graphical_appearance_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_colour_group_name = transactions_df_enriched.groupby('article_id')['colour_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_department_name = transactions_df_enriched.groupby('article_id')['department_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_index_group_name = transactions_df_enriched.groupby('article_id')['index_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+
+Most_frequent_prod_name = transactions_df_enriched.groupby('customer_id')['prod_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+Most_frequent_product_type_name = transactions_df_enriched.groupby('customer_id')['product_type_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+Most_frequent_graphical_appearance_name = transactions_df_enriched.groupby('customer_id')['graphical_appearance_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+Most_frequent_colour_group_name = transactions_df_enriched.groupby('customer_id')['colour_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+Most_frequent_department_name = transactions_df_enriched.groupby('customer_id')['department_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+Most_frequent_index_group_name = transactions_df_enriched.groupby('customer_id')['index_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
 
 
 Customer_preprocessed_model_df = transactions_df[['customer_id']]
