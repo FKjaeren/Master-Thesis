@@ -113,6 +113,8 @@ Article_id_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_
 Colour_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_colours+1).fit(product[['colour_group_name']].to_numpy().reshape(-1, 1))
 Department_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_departments+1).fit(product[['department_name']].to_numpy().reshape(-1, 1))
 
+Season_encoder = preprocessing.OrdinalEncoder(handle_unknown='use_encoded_value',unknown_value=5).fit(transactions_data_enriched[['season']])
+
 product_aggregated = train_enriched[['price','article_id','age','sales_channel_id']].groupby(['article_id']).mean().reset_index()
 product_aggregated = product[['article_id','prod_name','colour_group_name','department_name']].merge(product_aggregated, how = 'left', on = 'article_id')
 product_aggregated['colour_group_name'] = Colour_Encoder.transform(product_aggregated[['colour_group_name']].to_numpy().reshape(-1, 1))
