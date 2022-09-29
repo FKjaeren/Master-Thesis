@@ -48,6 +48,7 @@ num_postal = customer_df['postal_code'].nunique()
 postal_code_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_postal+1).fit(customer_df[['postal_code']].to_numpy().reshape(-1, 1))
 customer_df['postal_code'] = postal_code_Encoder.transform(customer_df[['postal_code']].to_numpy().reshape(-1, 1))
 
+customer_df.to_csv('Data/Preprocessed/customer_df_numeric.csv',index=False)
 
 
 
@@ -82,8 +83,6 @@ num_prod_names = articles_df['prod_name'].nunique()
 num_prod_type_names = articles_df['product_type_name'].nunique()
 num_graphical = articles_df['graphical_appearance_name'].nunique()
 num_index = articles_df['index_group_name'].nunique()
-
-
 
 
 Colour_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_colours+1).fit(articles_df[['colour_group_name']].to_numpy().reshape(-1, 1))
@@ -154,6 +153,14 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 
 map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
+number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'num_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
+                        'n_prod_type_names': num_prod_type_names, 'n_graphical':num_graphical, 'n_index' : num_index, 'n_postal':num_postal, 'n_fashion_news_frequency': 3+1, 'n_FN' : 2+1, 
+                        'n_active':2+1, 'n_club_member_status':3+1 ,'n_prices':num_prices, 'n_seasons': 4+1}
+
+
+with open(r"Data/Preprocessed/number_uniques_dict.pickle", "wb") as output_file:
+    pickle.dump(number_uniques_dict, output_file)
+
 transactions_df['season'] = transactions_df['season'].map(map_season)
 
 # Pickle dump the used encoder for later use
@@ -209,9 +216,24 @@ Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequen
 Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
 Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
 Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
+
+Product_df_preprocessed = deepcopy(articles_df)
+Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_sales_channel, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_season, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_day, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_month, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_year, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated_v2, how='left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_FN, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_Active, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
+Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
+
 # Save the merged dataframe
 Product_preprocessed_model_df.to_csv('Data/Preprocessed/FinalProductDataFrame.csv', index = False)
-
+Product_df_preprocessed.to_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv', index = False)
 
 # We do the same for all customer
 customer_id_aggregated = transactions_df_enriched[['customer_id','price']].groupby('customer_id').mean().reset_index()

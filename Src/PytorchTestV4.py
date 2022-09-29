@@ -13,6 +13,7 @@ from torch.utils.data import Dataset, TensorDataset
 import matplotlib.pyplot as plt
 from torch.profiler import profile, record_function, ProfilerActivity
 import os
+import pickle
 #os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 #dtype = torch.float
@@ -54,7 +55,7 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Customer_data, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111,device=device):
+    def __init__(self, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111,device=device):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
@@ -121,28 +122,71 @@ class RecSysModel(torch.nn.Module):
         return recommendations, indexes, matrixfactorization
 
 
-train_df = pd.read_csv('Data/Preprocessed/TrainData_enriched_subset.csv')
+#train_df = pd.read_csv('Data/Preprocessed/TrainData_enriched_subset.csv')
 #train_df = train_df.iloc[0:100000]
-valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched_subset.csv')
+#valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched_subset.csv')
 #test_df = pd.read_csv('Data/Preprocessed/TestData_enriched.csv')
 #valid_df = valid_df.iloc[0:50000]
+def ReadData(Subset = False):
+    if(Subset == True):
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')
 
-Customer_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')
-Product_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')
-transactions_df = pd.read_csv('Data/Preprocessed/transactions_df_numeric.csv')
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[0:150000]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[0:150000]
 
-splitrange = round(0.75*len(transactions_df['customer_id']))
-splitrange2 = round(0.95*len(transactions_df['customer_id']))
-train = transactions_df.iloc[:splitrange]
-valid = transactions_df.iloc[splitrange+1:splitrange2]
-test = transactions_df.iloc[splitrange2:]
-Customer_data_tensor = torch.tensor(Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-Product_data_tensor = torch.tensor(Product_data[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-customer_train_tensor = torch.tensor(train_dataset[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-product_train_tensor = torch.tensor(train_dataset[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+        if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
+            print('There is dimesion error in the data used for the feed forward (model input)')
 
-customer_valid_tensor = torch.tensor(valid_dataset[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-product_valid_tensor = torch.tensor(valid_dataset[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+        splitrange = round(0.75*len(Customer_Preprocessed_data['customer_id']))
+        splitrange2 = round(0.95*len(Customer_Preprocessed_data['customer_id']))
+        train_customer = Customer_Preprocessed_data.iloc[:splitrange]
+        valid_customer = Customer_Preprocessed_data.iloc[splitrange+1:splitrange2]
+        test_customer = Customer_Preprocessed_data.iloc[splitrange2:]
+
+        train_product = Product_Preprocessed_data.iloc[:splitrange]
+        valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
+        test_product = Product_Preprocessed_data.iloc[splitrange2:]
+    else:
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')
+
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')
+
+        if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
+            print('There is dimesion error in the data used for the feed forward (model input)')
+
+        splitrange = round(0.75*len(Customer_Preprocessed_data['customer_id']))
+        splitrange2 = round(0.95*len(Customer_Preprocessed_data['customer_id']))
+        train_customer = Customer_Preprocessed_data.iloc[:splitrange]
+        valid_customer = Customer_Preprocessed_data.iloc[splitrange+1:splitrange2]
+        test_customer = Customer_Preprocessed_data.iloc[splitrange2:]
+
+        train_product = Product_Preprocessed_data.iloc[:splitrange]
+        valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
+        test_product = Product_Preprocessed_data.iloc[splitrange2:]
+
+    with open(r"Data/Preprocessed/number_uniques_dict.pickle", "rb") as input_file:
+        number_uniques_dict = pickle.load(input_file)
+
+    #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    Product_data_tensor = torch.tensor(UniqueProducts_df[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    customer_train_tensor = torch.tensor(train_customer[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    product_train_tensor = torch.tensor(train_product[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+
+    customer_valid_tensor = torch.tensor(valid_customer[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    product_valid_tensor = torch.tensor(valid_product[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    #customer_dataset = CreateDataset(Customer_data_tensor)#,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+    product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+
+
+    product_train_dataset = CreateDataset(product_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+    customer_train_dataset = CreateDataset(customer_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+    product_valid_dataset = CreateDataset(product_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+    customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+
+    return product_dataset, product_train_dataset, customer_train_dataset, product_valid_dataset, customer_valid_dataset, number_uniques_dict
+
+
 
 """
 customer_dataset = TensorDataset(Customer_data_tensor)
@@ -153,20 +197,13 @@ product_valid_dataset = TensorDataset(customer_valid_tensor)
 customer_valid_dataset = TensorDataset(customer_valid_tensor)
 
 """
-customer_dataset = CreateDataset(Customer_data_tensor)#,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
-
-
-product_train_dataset = CreateDataset(product_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
-customer_train_dataset = CreateDataset(customer_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-product_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
-customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-
+product_dataset, product_train_dataset, customer_train_dataset, product_valid_dataset, customer_valid_dataset, number_uniques_dict = ReadData(Subset= True)
 
 batch_size = 1024
 embedding_dim = 64
-model = RecSysModel(customer_dataset, product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=num_products+1,
-                    n_customers=num_customers+1, n_prices=num_prices +1, n_colours=num_colours+1, n_departments=num_departments+1,device=device)
+model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=number_uniques_dict['n_products'],
+                    n_customers=number_uniques_dict['n_customers'], n_prices=number_uniques_dict['n_prices'], n_colours=number_uniques_dict['n_colours'], 
+                    n_departments=number_uniques_dict['n_departments'], device=device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
