@@ -164,6 +164,7 @@ train['price'] = train['price'].round(decimals=4)
 transactions_df['price'] = transactions_df['price'].round(decimals=4)
 num_prices = train['price'].nunique()
 Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prices+1).fit(train[['price']])
+#transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
 
 map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
@@ -292,5 +293,5 @@ Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequ
 Customer_preprocessed_model_df.to_csv('Data/Preprocessed/FinalCustomerDataFrame.csv', index = False)
 
 # Save the transactions df aswell
-transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
-transactions_df.to_csv('Data/Preprocessed/transactions_df_numeric.csv', index = False)
+#transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
+#transactions_df.to_csv('Data/Preprocessed/transactions_df_numeric.csv', index = False)
