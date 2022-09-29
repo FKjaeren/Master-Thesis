@@ -102,9 +102,9 @@ articles_df['graphical_appearance_name'] = Graphical_encoder.transform(articles_
 articles_df['index_group_name'] = Index_encoder.transform(articles_df[['index_group_name']].to_numpy().reshape(-1, 1))
 
 
-
 # Save the csv file wihtout the detalied descritption if we need later
 articles_df[['article_id','prod_name','product_type_name','graphical_appearance_name','colour_group_name','department_name','index_group_name']].to_csv('Data/Preprocessed/article_df_numeric.csv',index=False)
+
 
  
 
@@ -119,12 +119,7 @@ percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_v
 transactions_df_original = pd.read_csv(data_path+'transactions_train.csv')
 transactions_df = copy.deepcopy(transactions_df_original)
 
-# Divide into train, valid and test
-splitrange = round(0.75*len(transactions_df['customer_id']))
-splitrange2 = round(0.95*len(transactions_df['customer_id']))
-train = transactions_df.iloc[:splitrange]
-valid = transactions_df.iloc[splitrange+1:splitrange2]
-test = transactions_df.iloc[splitrange2:]
+
 
 #datetime and create a day, month and year column
 transactions_df.t_dat = pd.to_datetime(transactions_df.t_dat)
@@ -133,6 +128,25 @@ transactions_df['day'] =  pd.DatetimeIndex(transactions_df['t_dat']).day
 transactions_df['month'] =  pd.DatetimeIndex(transactions_df['t_dat']).month
 transactions_df['year'] =  pd.DatetimeIndex(transactions_df['t_dat']).year
 transactions_df = transactions_df.drop(['t_dat'], axis = 1)
+
+# Divide into train, valid and test
+splitrange = round(0.75*len(transactions_df['customer_id']))
+splitrange2 = round(0.95*len(transactions_df['customer_id']))
+train = transactions_df.iloc[:splitrange]
+valid = transactions_df.iloc[splitrange+1:splitrange2]
+test = transactions_df.iloc[splitrange2:]
+
+num_days = transactions_df.day.nunique()
+num_months = transactions_df.month.nunique()
+num_year = transactions_df.year.nunique()
+
+Year_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_year+1).fit(train[['year']])
+train['year'] = Year_encoder.transform(train[['year']])
+valid['year'] = Year_encoder.transform(valid[['year']])
+test['year'] = Year_encoder.transform(test[['year']])
+transactions_df['year'] = Year_encoder.transform(transactions_df[['year']])
+
+
 
 # Create season column
 transactions_df.loc[(transactions_df['month']>= 1) & (transactions_df['month'] <=2), 'season'] = 'Winter'
@@ -153,9 +167,13 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 
 map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
+num_sales_channels = transactions_df.sales_channel_id.nunique()
+
+
 number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'n_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
                         'n_prod_type_names': num_prod_type_names, 'n_graphical':num_graphical, 'n_index' : num_index, 'n_postal':num_postal, 'n_fashion_news_frequency': 3+1, 'n_FN' : 2+1, 
-                        'n_active':2+1, 'n_club_member_status':3+1 ,'n_prices':num_prices, 'n_seasons': 4+1}
+                        'n_active':2+1, 'n_club_member_status':3+1 ,'n_prices':num_prices, 'n_seasons': 4+1, 'n_sales_channels' : num_sales_channels+1, 'n_days' : num_days+1,
+                        'n_months' : num_months +1, 'n_year': num_year+1}
 
 
 with open(r"Data/Preprocessed/number_uniques_dict.pickle", "wb") as output_file:
@@ -174,6 +192,7 @@ pickle.dump(Index_encoder, open('Models/Index_Encoder.sav', 'wb'))
 pickle.dump(Graphical_encoder, open('Models/Graphical_Encoder.sav', 'wb'))
 pickle.dump(Prod_type_encoder, open('Models/Prod_Type_Encoder.sav', 'wb'))
 pickle.dump(postal_code_Encoder, open('Models/Postal_Code_Encoder.sav', 'wb'))
+pickle.dump(Year_encoder, open('Models/Year_Encoder.sav', 'wb'))
 
 
 ### customer_id, article_id, price, sales_channel_id, season, day, month, year

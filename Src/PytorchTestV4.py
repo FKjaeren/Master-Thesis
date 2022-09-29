@@ -1,3 +1,4 @@
+from math import prod
 import torch
 import platform
 #import torchvision
@@ -55,24 +56,34 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Products_data, embedding_dim, batch_size, n_products, n_customers, n_prices, n_colours, n_departments,n_ages=111,device=device):
+    def __init__(self, Products_data, embedding_dim, batch_size, n_unique_dict,n_ages=111,device=device):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
-        self.num_customers = n_customers
-        self.num_products = n_products
-        self.num_prices = n_prices
-        self.num_ages = n_ages
-        self.num_colours = n_colours
-        self.num_departments = n_departments
-        self.customer_embedding = nn.Embedding(self.num_customers+2, embedding_dim).to(device)    
-        self.product_embedding = nn.Embedding(self.num_products+2, embedding_dim).to(device)
-        self.price_embedding = nn.Embedding(self.num_prices+2, embedding_dim).to(device)
-        self.age_embedding = nn.Embedding(self.num_ages+2,embedding_dim).to(device)
-        self.colour_embedding = nn.Embedding(self.num_colours+2, embedding_dim).to(device)
-        self.department_embedding = nn.Embedding(self.num_departments+2, embedding_dim).to(device)
+        self.n_unique_dict = n_unique_dict
+        self.n_ages = n_ages
 
+        self.customer_embedding = nn.Embedding(self.n_unique_dict['n_customers']+1, embedding_dim).to(device)    
+        self.product_embedding = nn.Embedding(self.n_unique_dict['n_products']+1, embedding_dim).to(device)
+        self.price_embedding = nn.Embedding(self.n_unique_dict['n_prices']+1, embedding_dim).to(device)
+        self.age_embedding = nn.Embedding(self.n_ages+2,embedding_dim).to(device)
+        self.colour_embedding = nn.Embedding(self.n_unique_dict['n_colours']+1, embedding_dim).to(device)
+        self.department_embedding = nn.Embedding(self.n_unique_dict['n_departments']+1, embedding_dim).to(device)
+        self.prod_name_embedding = nn.Embedding(self.n_unique_dict['n_prod_names']+1, embedding_dim).to(device)  
+        self.product_type_name_embedding = nn.Embedding(self.n_unique_dict['n_prod_type_names']+1, embedding_dim).to(device)  
+        self.index_group_name_embedding = nn.Embedding(self.n_unique_dict['n_index']+1, embedding_dim).to(device)  
+        self.sales_channel_id_embedding = nn.Embedding(self.n_unique_dict['n_sales_channels']+1, embedding_dim).to(device)  
+        self.season_embedding = nn.Embedding(self.n_unique_dict['n_seasons']+1, embedding_dim).to(device)  
+        self.day_embedding = nn.Embedding(self.n_unique_dict['n_days']+1, embedding_dim).to(device)  
+        self.month_embedding = nn.Embedding(self.n_unique_dict['n_months']+1, embedding_dim).to(device)  
+        self.year_embedding = nn.Embedding(self.n_unique_dict['n_year']+1, embedding_dim).to(device)  
+        self.FN_embedding = nn.Embedding(self.n_unique_dict['n_FN']+1, embedding_dim).to(device)  
+        self.Active_embedding = nn.Embedding(self.n_unique_dict['n_active']+1, embedding_dim).to(device)  
+        self.club_member_status_embedding = nn.Embedding(self.n_unique_dict['n_club_member_status']+1, embedding_dim).to(device)  
+        self.fashion_news_frequency_embedding = nn.Embedding(self.n_unique_dict['n_fashion_news_frequency']+1, embedding_dim).to(device)  
+        self.postal_code_embedding = nn.Embedding(self.n_unique_dict['n_postal']+1, embedding_dim).to(device)  
+        self.graphical_embedding = nn.Embedding(self.n_unique_dict['n_graphical']+1, embedding_dim).to(device)  
 
         self.All_Products = Products_data#.to(device)
 
@@ -87,17 +98,51 @@ class RecSysModel(torch.nn.Module):
         device = self.device
         All_products = self.All_Products[:,:].to(device)
         customer_embedding = self.customer_embedding(Customer_data[:,0])
-        price_embedding = self.price_embedding(Customer_data[:,1])
-        age_embedding = self.age_embedding(Customer_data[:,2])
-        colour_embedding = self.colour_embedding(Customer_data[:,3])
-        department_embedding = self.department_embedding(Customer_data[:,4])
-        customer_embedding_final = torch.cat((customer_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1).to(device)
+        fn_embedding = self.FN_embedding(Customer_data[:,14])
+
+        prod_name_embedding = self.prod_name_embedding(Customer_data[:,1])
+        product_type_name_embedding = self.product_type_name_embedding(Customer_data[:,2])
+        graphical_embedding = self.graphical_embedding(Customer_data[:,3])
+        colour_embedding = self.colour_embedding(Customer_data[:,4])
+        department_embedding = self.department_embedding(Customer_data[:,5])
+        index_embedding = self.index_group_name_embedding(Customer_data[:,6])
+        price_embedding = self.price_embedding(Customer_data[:,7])
+        sales_channel_embedding = self.sales_channel_id_embedding(Customer_data[:,8])
+        season_embedding = self.season_embedding(Customer_data[:9])
+        day_embedding = self.day_embedding(Customer_data[:,10])
+        month_embbeding = self.month_embedding(Customer_data[:,11])
+        year_embedding = self.year_embedding(Customer_data[:,12])
+        age_embedding = self.age_embedding(Customer_data[:,13])
+        active_embedding = self.Active_embedding(Customer_data[:,15])
+        club_membership_embedding = self.club_member_status_embedding(Customer_data[:,16])
+        fashion_news_embedding = self.fashion_news_frequency_embedding(Customer_data[:,17])
+        postal_code_embedding = self.postal_code_embedding(Customer_data[:,18])
+        customer_embedding_final = torch.cat((customer_embedding, prod_name_embedding,product_type_name_embedding, graphical_embedding, colour_embedding, department_embedding,
+                                            index_embedding, price_embedding, sales_channel_embedding, season_embedding, day_embedding, month_embbeding, year_embedding,
+                                            age_embedding, fn_embedding, active_embedding, club_membership_embedding, fashion_news_embedding, postal_code_embedding), dim = 1).to(device)
+
         product_embedding = self.product_embedding(All_products[:,0])
-        price_embedding = self.price_embedding(All_products[:,1])
-        age_embedding = self.age_embedding(All_products[:,2])
-        colour_embedding = self.colour_embedding(All_products[:,3])
-        department_embedding = self.department_embedding(All_products[:,4])
-        product_embedding_final = torch.cat((product_embedding, price_embedding, age_embedding, colour_embedding, department_embedding), dim = 1).to(device)
+        prod_name_embedding = self.prod_name_embedding(All_products[:,1])
+        product_type_name_embedding = self.product_type_name_embedding(All_products[:,2])
+        graphical_embedding = self.graphical_embedding(All_products[:,3])
+        colour_embedding = self.colour_embedding(All_products[:,4])
+        department_embedding = self.department_embedding(All_products[:,5])
+        index_embedding = self.index_group_name_embedding(All_products[:,6])
+        price_embedding = self.price_embedding(All_products[:,7])
+        sales_channel_embedding = self.sales_channel_id_embedding(All_products[:,8])
+        season_embedding = self.season_embedding(All_products[:9])
+        day_embedding = self.day_embedding(All_products[:,10])
+        month_embbeding = self.month_embedding(All_products[:,11])
+        year_embedding = self.year_embedding(All_products[:,12])
+        age_embedding = self.age_embedding(All_products[:,13])
+        fn_embedding = self.FN_embedding(All_products[:,14])
+        active_embedding = self.Active_embedding(All_products[:,15])
+        club_membership_embedding = self.club_member_status_embedding(All_products[:,16])
+        fashion_news_embedding = self.fashion_news_frequency_embedding(All_products[:,17])
+        postal_code_embedding = self.postal_code_embedding(All_products[:,18])
+        product_embedding_final = torch.cat((product_embedding, prod_name_embedding,product_type_name_embedding, graphical_embedding, colour_embedding, department_embedding,
+                                            index_embedding, price_embedding, sales_channel_embedding, season_embedding, day_embedding, month_embbeding, year_embedding,
+                                            age_embedding, fn_embedding, active_embedding, club_membership_embedding, fashion_news_embedding, postal_code_embedding), dim = 1).to(device)
         output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final)).to(device)
         #calc_metrics = self.monitor_metrics(output,Product_data[:,0].view(1,-1))
         return output#, calc_metrics
@@ -127,12 +172,16 @@ class RecSysModel(torch.nn.Module):
 #valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched_subset.csv')
 #test_df = pd.read_csv('Data/Preprocessed/TestData_enriched.csv')
 #valid_df = valid_df.iloc[0:50000]
-def ReadData(batch_size, Subset = False):
+def ReadData(product, customer, features, batch_size, Subset = False):
+    prod_features= copy.deepcopy(features)
+    customer_features = copy.deepcopy(features)
+    customer_features.insert(0, customer)
+    prod_features.insert(0, product)
     if(Subset == True):
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[0:150000]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[0:150000]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features][0:150000]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features][0:150000]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -147,10 +196,10 @@ def ReadData(batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
     else:
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -169,12 +218,12 @@ def ReadData(batch_size, Subset = False):
         number_uniques_dict = pickle.load(input_file)
 
     #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-    Product_data_tensor = torch.tensor(UniqueProducts_df[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-    customer_train_tensor = torch.tensor(train_customer[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-    product_train_tensor = torch.tensor(train_product[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    Product_data_tensor = torch.tensor(UniqueProducts_df.to_numpy(), dtype = torch.int)
+    customer_train_tensor = torch.tensor(train_customer.to_numpy(), dtype = torch.int)
+    product_train_tensor = torch.tensor(train_product.to_numpy(), dtype = torch.int)
 
-    customer_valid_tensor = torch.tensor(valid_customer[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
-    product_valid_tensor = torch.tensor(valid_product[['article_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+    customer_valid_tensor = torch.tensor(valid_customer.to_numpy(), dtype = torch.int)
+    product_valid_tensor = torch.tensor(valid_product.to_numpy(), dtype = torch.int)
     #customer_dataset = CreateDataset(Customer_data_tensor)#,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
@@ -208,12 +257,15 @@ customer_valid_dataset = TensorDataset(customer_valid_tensor)
 """
 batch_size = 1024
 
-product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape = ReadData(batch_size=batch_size, Subset= True)
+product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape = ReadData(
+                                                            product='article_id', customer='customer_id',features= ['FN', 'Active', 'club_member_status',
+                                                            'fashion_news_frequency', 'age', 'postal_code', 'price',
+                                                            'sales_channel_id', 'season', 'day', 'month', 'year', 'prod_name',
+                                                            'product_type_name', 'graphical_appearance_name', 'colour_group_name',
+                                                            'department_name', 'index_group_name'], batch_size=batch_size, Subset= True)
 
-embedding_dim = 64
-model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=number_uniques_dict['n_products'],
-                    n_customers=number_uniques_dict['n_customers'], n_prices=number_uniques_dict['n_prices'], n_colours=number_uniques_dict['n_colours'], 
-                    n_departments=number_uniques_dict['n_departments'], device=device)
+embedding_dim = 16
+model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict,n_ages = 111, device=device)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
