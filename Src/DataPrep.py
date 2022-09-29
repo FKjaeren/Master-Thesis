@@ -153,7 +153,7 @@ Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value
 
 map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
-number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'num_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
+number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'n_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
                         'n_prod_type_names': num_prod_type_names, 'n_graphical':num_graphical, 'n_index' : num_index, 'n_postal':num_postal, 'n_fashion_news_frequency': 3+1, 'n_FN' : 2+1, 
                         'n_active':2+1, 'n_club_member_status':3+1 ,'n_prices':num_prices, 'n_seasons': 4+1}
 

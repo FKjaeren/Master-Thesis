@@ -127,7 +127,7 @@ class RecSysModel(torch.nn.Module):
 #valid_df = pd.read_csv('Data/Preprocessed/ValidData_enriched_subset.csv')
 #test_df = pd.read_csv('Data/Preprocessed/TestData_enriched.csv')
 #valid_df = valid_df.iloc[0:50000]
-def ReadData(Subset = False):
+def ReadData(batch_size, Subset = False):
     if(Subset == True):
         UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')
 
@@ -184,7 +184,16 @@ def ReadData(Subset = False):
     product_valid_dataset = CreateDataset(product_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
     customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
-    return product_dataset, product_train_dataset, customer_train_dataset, product_valid_dataset, customer_valid_dataset, number_uniques_dict
+    train_shape = product_train_tensor.shape
+
+    #Training in batches:
+    product_train_loader = torch.utils.data.DataLoader(product_train_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
+    customer_train_loader = torch.utils.data.DataLoader(customer_train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+
+    product_valid_loader = torch.utils.data.DataLoader(product_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+    customer_valid_loader = torch.utils.data.DataLoader(customer_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+
+    return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape
 
 
 
@@ -197,9 +206,10 @@ product_valid_dataset = TensorDataset(customer_valid_tensor)
 customer_valid_dataset = TensorDataset(customer_valid_tensor)
 
 """
-product_dataset, product_train_dataset, customer_train_dataset, product_valid_dataset, customer_valid_dataset, number_uniques_dict = ReadData(Subset= True)
-
 batch_size = 1024
+
+product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape = ReadData(batch_size=batch_size, Subset= True)
+
 embedding_dim = 64
 model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_products=number_uniques_dict['n_products'],
                     n_customers=number_uniques_dict['n_customers'], n_prices=number_uniques_dict['n_prices'], n_colours=number_uniques_dict['n_colours'], 
@@ -208,14 +218,6 @@ optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.00
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 1
-
-
-#Training in batches:
-product_train_loader = torch.utils.data.DataLoader(product_train_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
-customer_train_loader = torch.utils.data.DataLoader(customer_train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
-
-product_valid_loader = torch.utils.data.DataLoader(product_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
-customer_valid_loader = torch.utils.data.DataLoader(customer_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
 #Num_classes = len(Product_data['product_id'])
 dataiter = iter(product_train_loader)
@@ -238,7 +240,7 @@ for epoch in range(1,num_epochs+1):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     # Every data instance is an input + label pair
-    for i, product_data_batch,customer_data_batch in zip(np.arange(1,product_train_tensor.shape[0]),product_train_loader,customer_train_loader):
+    for i, product_data_batch,customer_data_batch in zip(np.arange(1,train_shape[0]),product_train_loader,customer_train_loader):
         #product_id = product_id.view(batch_size,1)
         #print(product_data_batch)
         product_id = product_data_batch[:,0]
@@ -268,7 +270,7 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     model.eval()
     epoch_valid_loss = []
-    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,product_train_tensor.shape[0]), product_valid_loader, customer_valid_loader):
+    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,train_shape[0]), product_valid_loader, customer_valid_loader):
         product_id = product_data_batch_valid[:,0].type(torch.long)
         outputs = model(customer_data_batch_valid, product_data_batch_valid)
         output = torch.squeeze(outputs, 1)
@@ -287,7 +289,7 @@ for epoch in range(1,num_epochs+1):
 
 #prof.stop()
 
-"""
+
 print("finished training")
 print("Loss list = ", Loss_list)
 
@@ -297,6 +299,7 @@ plt.ylabel('Loss')
 plt.title('Training graph')
 plt.show()
 
+"""
 with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
    with record_function("model_inference"):
       model(customer_data_batch_valid, product_data_batch_valid)
