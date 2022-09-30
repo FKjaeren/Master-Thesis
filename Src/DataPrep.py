@@ -3,11 +3,11 @@ from copy import deepcopy
 import numpy as np 
 import pandas as pd
 import pickle
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import copy
 
-import seaborn as sns
+#import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder
 
@@ -28,6 +28,8 @@ customer_df["Active"] = customer_df["Active"].map(map2)
 
 map3 =  {"LEFT CLUB":0, "PRE-CREATE": 1, "ACTIVE":2, np.nan:0}
 customer_df["club_member_status"] = customer_df["club_member_status"].map(map3)
+
+customer_df["age"] = customer_df["age"].fillna(0)
 
 #drop nan values
 #customer_df = customer_df.dropna(subset=["age", "fashion_news_frequency", "club_member_status"], axis=0)

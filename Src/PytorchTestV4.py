@@ -18,8 +18,9 @@ import pickle
 #os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 #dtype = torch.float
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-OS = platform.system()
+device = torch.device("cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+""" OS = platform.system()
 if(OS == 'Darwin'):
     device = torch.device("cpu")
     #device = torch.device("mps")
@@ -28,7 +29,7 @@ elif(OS == "Windows"):
 elif(OS == "Linux"):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 else:
-    print('The operating system is not reconized, therefore we could not set device type :(')
+    print('The operating system is not reconized, therefore we could not set device type :(') """
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
@@ -66,7 +67,7 @@ class RecSysModel(torch.nn.Module):
 
         self.customer_embedding = nn.Embedding(self.n_unique_dict['n_customers']+1, embedding_dim).to(device)    
         self.product_embedding = nn.Embedding(self.n_unique_dict['n_products']+1, embedding_dim).to(device)
-        self.price_embedding = nn.Embedding(self.n_unique_dict['n_prices']+1, embedding_dim).to(device)
+        self.price_embedding = nn.Embedding(self.n_unique_dict['n_prices']+2, embedding_dim).to(device)
         self.age_embedding = nn.Embedding(self.n_ages+2,embedding_dim).to(device)
         self.colour_embedding = nn.Embedding(self.n_unique_dict['n_colours']+1, embedding_dim).to(device)
         self.department_embedding = nn.Embedding(self.n_unique_dict['n_departments']+1, embedding_dim).to(device)
@@ -106,7 +107,7 @@ class RecSysModel(torch.nn.Module):
         postal_code_embedding = self.postal_code_embedding(Customer_data[:,6])
         price_embedding = self.price_embedding(Customer_data[:,7])
         sales_channel_embedding = self.sales_channel_id_embedding(Customer_data[:,8])
-        season_embedding = self.season_embedding(Customer_data[:9])
+        season_embedding = self.season_embedding(Customer_data[:,9])
         day_embedding = self.day_embedding(Customer_data[:,10])
         month_embbeding = self.month_embedding(Customer_data[:,11])
         year_embedding = self.year_embedding(Customer_data[:,12])
@@ -116,11 +117,9 @@ class RecSysModel(torch.nn.Module):
         colour_embedding = self.colour_embedding(Customer_data[:,16])
         department_embedding = self.department_embedding(Customer_data[:,17])
         index_embedding = self.index_group_name_embedding(Customer_data[:,18])
-
         customer_embedding_final = torch.cat((customer_embedding, prod_name_embedding,product_type_name_embedding, graphical_embedding, colour_embedding, department_embedding,
                                             index_embedding, price_embedding, sales_channel_embedding, season_embedding, day_embedding, month_embbeding, year_embedding,
                                             age_embedding, fn_embedding, active_embedding, club_membership_embedding, fashion_news_embedding, postal_code_embedding), dim = 1).to(device)
-
         product_embedding = self.product_embedding(All_products[:,0])
         fn_embedding = self.FN_embedding(All_products[:,1])
         active_embedding = self.Active_embedding(All_products[:,2])
@@ -130,7 +129,7 @@ class RecSysModel(torch.nn.Module):
         postal_code_embedding = self.postal_code_embedding(All_products[:,6])
         price_embedding = self.price_embedding(All_products[:,7])
         sales_channel_embedding = self.sales_channel_id_embedding(All_products[:,8])
-        season_embedding = self.season_embedding(All_products[:9])
+        season_embedding = self.season_embedding(All_products[:,9])
         day_embedding = self.day_embedding(All_products[:,10])
         month_embbeding = self.month_embedding(All_products[:,11])
         year_embedding = self.year_embedding(All_products[:,12])
