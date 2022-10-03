@@ -34,23 +34,13 @@ else:
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
 
-        #self.id = idx_variable
-        #self.features = features
         self.all_data = dataset
-        #self.device = device
 
     def __len__(self):
         return len(self.all_data)
 
     def __getitem__(self, row):
-        #print("Før feature og ind til device ")
 
-        #features = torch.tensor(self.all_data[self.features].to_numpy(), dtype = torch.int)#, device=self.device)
-        #idx_variable = torch.tensor(self.all_data[self.id].to_numpy(), dtype = torch.int)#, device = self.device)
-        #print("Hej ", idx_variable.device)
-        #all_data = torch.cat((idx_variable, features), dim = 1)
-        #all_data = all_data.to(self.device)
-        #print("device of dataset is: ",all_data.device)
         return self.all_data[row]
     def shape(self):
         shape_value = self.all_data.shape
@@ -227,13 +217,17 @@ def ReadData(product, customer, features, batch_size, Subset = False):
     #customer_dataset = CreateDataset(Customer_data_tensor)#,features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
+    customer_test_tensor = torch.tensor(test_customer.fillna(0).to_numpy(), dtype = torch.int)
+    product_test_tensor = torch.tensor(test_product.fillna(0).to_numpy(), dtype = torch.int)
 
     product_train_dataset = CreateDataset(product_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
     customer_train_dataset = CreateDataset(customer_train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     product_valid_dataset = CreateDataset(product_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
     customer_valid_dataset = CreateDataset(customer_valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+    product_test_dataset = CreateDataset(product_test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
+    customer_test_dataset = CreateDataset(customer_test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
-    train_shape = product_train_tensor.shape
+    dataset_shapes = {'train_shape':product_train_tensor.shape,'valid_shape':product_valid_tensor.shape,'test_shape':product_test_tensor.shape}
 
     #Training in batches:
     product_train_loader = torch.utils.data.DataLoader(product_train_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
@@ -242,22 +236,14 @@ def ReadData(product, customer, features, batch_size, Subset = False):
     product_valid_loader = torch.utils.data.DataLoader(product_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
     customer_valid_loader = torch.utils.data.DataLoader(customer_valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
-    return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape
+    product_test_loader = torch.utils.data.DataLoader(product_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+    customer_test_loader = torch.utils.data.DataLoader(customer_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
+    return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes, product_test_loader, customer_test_loader
 
-
-"""
-customer_dataset = TensorDataset(Customer_data_tensor)
-product_dataset = TensorDataset(Product_data_tensor)
-product_train_dataset = TensorDataset(product_train_tensor)
-customer_train_dataset = TensorDataset(customer_train_tensor)
-product_valid_dataset = TensorDataset(customer_valid_tensor)
-customer_valid_dataset = TensorDataset(customer_valid_tensor)
-
-"""
 batch_size = 1024
 
-product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, train_shape = ReadData(
+product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes,_ ,_ = ReadData(
                                                             product='article_id', customer='customer_id',features= ['FN', 'Active', 'club_member_status',
                                                             'fashion_news_frequency', 'age', 'postal_code', 'price',
                                                             'sales_channel_id', 'season', 'day', 'month', 'year', 'prod_name',
@@ -269,7 +255,7 @@ model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=bat
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-num_epochs = 1
+num_epochs = 10
 
 #Num_classes = len(Product_data['product_id'])
 dataiter = iter(product_train_loader)
@@ -292,7 +278,7 @@ for epoch in range(1,num_epochs+1):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     # Every data instance is an input + label pair
-    for i, product_data_batch,customer_data_batch in zip(np.arange(1,train_shape[0]),product_train_loader,customer_train_loader):
+    for i, product_data_batch,customer_data_batch in zip(np.arange(1,dataset_shapes['train_shape'][0]),product_train_loader,customer_train_loader):
         #product_id = product_id.view(batch_size,1)
         #print(product_data_batch)
         product_id = product_data_batch[:,0]
@@ -336,8 +322,8 @@ for epoch in range(1,num_epochs+1):
         best_model = model
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
-#PATH = 'Models/Baseline_MulitDim_model.pth'
-#torch.save(best_model, PATH)
+PATH = 'Models/Baseline_MulitDim_model.pth'
+torch.save(best_model, PATH)
 
 #prof.stop()
 
