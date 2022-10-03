@@ -4,32 +4,6 @@ from torch import nn
 import torch
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class MultiLayerPerceptron(torch.nn.Module):
     """
     Class to instantiate a Multilayer Perceptron model
