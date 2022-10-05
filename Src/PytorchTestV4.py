@@ -47,7 +47,7 @@ class CreateDataset(Dataset):
         return shape_value
 
 class RecSysModel(torch.nn.Module):
-    def __init__(self, Products_data, embedding_dim, batch_size, n_unique_dict,n_ages=111,device=device):
+    def __init__(self, Products_data, embedding_dim, batch_size, n_unique_dict,device,n_ages=111):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
@@ -251,7 +251,7 @@ product_dataset, product_train_loader, customer_train_loader, product_valid_load
                                                             'department_name', 'index_group_name'], batch_size=batch_size, Subset= True)
 
 embedding_dim = 16
-model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict,n_ages = 111, device=device)
+model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict, device=device, n_ages = 111)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
@@ -308,7 +308,7 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     model.eval()
     epoch_valid_loss = []
-    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,train_shape[0]), product_valid_loader, customer_valid_loader):
+    for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,dataset_shapes['valid_shape'][0]), product_valid_loader, customer_valid_loader):
         product_id = product_data_batch_valid[:,0].type(torch.long)
         outputs = model(customer_data_batch_valid, product_data_batch_valid)
         output = torch.squeeze(outputs, 1)
