@@ -6,7 +6,7 @@ import pickle
 #import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import copy
-
+import random
 #import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder
@@ -121,8 +121,15 @@ percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_v
 transactions_df_original = pd.read_csv(data_path+'transactions_train.csv')
 transactions_df = copy.deepcopy(transactions_df_original)
 
+transactions_df = transactions_df[transactions_df['t_dat']>'2019-09-21']
 
+transactions_df = transactions_df.iloc[-300000:].reset_index().drop(['index'],axis = 1)
 
+ones_data = np.ones(shape=(len(transactions_df),1))
+target = pd.DataFrame(ones_data, columns=['targets'])
+
+#transactions_df = pd.concat([transactions_df,target], axis = 1)
+transactions_df['target'] = target['targets']
 #datetime and create a day, month and year column
 transactions_df.t_dat = pd.to_datetime(transactions_df.t_dat)
 
@@ -138,14 +145,15 @@ train = transactions_df.iloc[:splitrange]
 valid = transactions_df.iloc[splitrange+1:splitrange2]
 test = transactions_df.iloc[splitrange2:]
 
+
 num_days = transactions_df.day.nunique()
 num_months = transactions_df.month.nunique()
 num_year = transactions_df.year.nunique()
 
 Year_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_year+1).fit(train[['year']])
-train['year'] = Year_encoder.transform(train[['year']])
-valid['year'] = Year_encoder.transform(valid[['year']])
-test['year'] = Year_encoder.transform(test[['year']])
+train['year'] = Year_encoder.transform(train[['year']].to_numpy().reshape(-1, 1))
+valid['year'] = Year_encoder.transform(valid[['year']].to_numpy().reshape(-1, 1))
+test['year'] = Year_encoder.transform(test[['year']].to_numpy().reshape(-1, 1))
 transactions_df['year'] = Year_encoder.transform(transactions_df[['year']])
 
 
@@ -168,10 +176,83 @@ num_prices = train['price'].nunique()
 Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prices+1).fit(train[['price']])
 #transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
 
+#train['customer_id'] = Customer_id_Encoder.transform(train[['customer_id']].to_numpy().reshape(-1, 1))
+#train['article_id'] = article_id_Encoder.transform(train[['article_id']].to_numpy().reshape(-1, 1))
 map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
+transactions_df['season'] = transactions_df['season'].map(map_season)
+
+
+train = transactions_df.iloc[:splitrange]
+valid = transactions_df.iloc[splitrange+1:splitrange2]
+test = transactions_df.iloc[splitrange2:]
+
+
+unique_train_customers = train.customer_id.unique()
+unique_train_articles = train.article_id.unique()
+
+num_negative = 100
+interactions_list = []
+for c in unique_train_customers:
+    for i in range(num_negative):
+        item = random.choice(unique_train_articles)
+        interactions_list.append([c,item,0])
+
+negative_df = pd.DataFrame(data = interactions_list, columns = ['customer_id','article_id','negative_values'])
+negative_df['day'] = np.random.randint(1, 28, negative_df.shape[0])
+negative_df['month'] = np.random.randint(1, 12, negative_df.shape[0])
+#negative_df['year'] = np.random.randint(0, transactions_df.year.unique().max(), negative_df.shape[0])
+negative_df['year'] = np.zeros(negative_df.shape[0])
+
+negative_df.loc[(negative_df['month']>= 1) & (negative_df['month'] <=2), 'season'] = 'Winter'
+negative_df.loc[(negative_df['month'] == 12), 'season'] = 'Winter' 
+negative_df.loc[(negative_df['month'] >= 3) & (negative_df['month'] <=5), 'season'] = 'Spring' 
+negative_df.loc[(negative_df['month'] >= 6) & (negative_df['month'] <=8),'season'] = 'Summer' 
+negative_df.loc[(negative_df['month'] >= 9) & (negative_df['month'] <=11), 'season'] = 'Autumn' 
+negative_df['season'] = negative_df['season'].map(map_season)
+
+
+temp = train[['article_id','price','sales_channel_id']].groupby(['article_id']).mean().reset_index()
+temp['sales_channel_id'] = temp['sales_channel_id'].round()
+temp['price'] = temp['price'].round(decimals=4)
+
+negative_df = negative_df.merge(temp, on = 'article_id', how = 'left')
+
+train = train.merge(negative_df, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
+train = train[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
 num_sales_channels = transactions_df.sales_channel_id.nunique()
 
+
+train = train.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+train = train.merge(customer_df, how = 'left', on ='customer_id')
+
+valid = valid.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+valid = valid.merge(customer_df, how = 'left', on ='customer_id')
+
+test = test.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+test = test.merge(customer_df, how = 'left', on ='customer_id')
+
+train = train[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+       'month', 'year', 'season', 'prod_name', 'product_type_name',
+       'graphical_appearance_name', 'colour_group_name', 'department_name',
+       'index_group_name', 'FN', 'Active', 'club_member_status',
+       'fashion_news_frequency', 'age', 'postal_code','target']]
+
+valid = valid[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+       'month', 'year', 'season', 'prod_name', 'product_type_name',
+       'graphical_appearance_name', 'colour_group_name', 'department_name',
+       'index_group_name', 'FN', 'Active', 'club_member_status',
+       'fashion_news_frequency', 'age', 'postal_code','target']]
+
+test = test[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+       'month', 'year', 'season', 'prod_name', 'product_type_name',
+       'graphical_appearance_name', 'colour_group_name', 'department_name',
+       'index_group_name', 'FN', 'Active', 'club_member_status',
+       'fashion_news_frequency', 'age', 'postal_code','target']]
+
+train.to_csv('Data/Preprocessed/train_df.csv', index = False)
+valid.to_csv('Data/Preprocessed/valid_df.csv', index=False)
+test.to_csv('Data/Preprocessed/test_df.csv', index = False)
 
 number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'n_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
                         'n_prod_type_names': num_prod_type_names, 'n_graphical':num_graphical, 'n_index' : num_index, 'n_postal':num_postal, 'n_fashion_news_frequency': 3+1, 'n_FN' : 2+1, 
@@ -182,7 +263,6 @@ number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_product
 with open(r"Data/Preprocessed/number_uniques_dict.pickle", "wb") as output_file:
     pickle.dump(number_uniques_dict, output_file)
 
-transactions_df['season'] = transactions_df['season'].map(map_season)
 
 # Pickle dump the used encoder for later use
 pickle.dump(Customer_id_Encoder, open('Models/Customer_Id_Encoder.sav', 'wb'))

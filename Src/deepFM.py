@@ -1,4 +1,5 @@
 
+import random
 import torch
 import pandas as pd
 import numpy as np
@@ -8,59 +9,55 @@ import pickle
 from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
 
 class CreateDataset(Dataset):
-    def __init__(self, dataset, targets):#, features, idx_variable):
+    def __init__(self, dataset):#, features, idx_variable):
 
-        self.dataset = dataset
-        self.targets = targets
+        self.dataset = dataset[:,0:-1]
+        self.targets = dataset[:,-1:].float()
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, row):
-
         return self.dataset[row], self.targets[row]
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-
-df = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[0:130000]
+"""
+customers = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[0:130000]
 
 products = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[0:130000]
 
-product_ids = products[['article_id']]
+df = pd.read_csv('Data/Preprocessed/AllDataOneTable.csv')[0:130000]
+"""
+#product_ids = products[['article_id']]
 
-splitrange = round(0.75*len(df['customer_id']))
-splitrange2 = round(0.95*len(df['customer_id']))
-train_df = df.iloc[:splitrange]
-valid_df = df.iloc[splitrange+1:splitrange2]
-test_df = df.iloc[splitrange2:]
-device = torch.device("cpu")
+train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:3000000]
+valid_df = pd.read_csv('Data/Preprocessed/valid_df.csv')
+test_df = pd.read_csv('Data/Preprocessed/test_df.csv')
 
-train_product_ids = product_ids[:splitrange]
-valid_products_ids = product_ids[splitrange+1:splitrange2]
+#train_tensor_product_ids = torch.tensor(train_product_ids.fillna(0).to_numpy(), dtype = torch.int)
+#valid_tensor_product_ids = torch.tensor(valid_products_ids.fillna(0).to_numpy(), dtype = torch.int)
 
-train_tensor_product_ids = torch.tensor(train_product_ids.fillna(0).to_numpy(), dtype = torch.int)
-valid_tensor_product_ids = torch.tensor(valid_products_ids.fillna(0).to_numpy(), dtype = torch.int)
-
+device = torch.device('cpu')
 
 train_tensor = torch.tensor(train_df.fillna(0).to_numpy(), dtype = torch.int)
 valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
 test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
 
-train_dataset = CreateDataset(train_tensor,train_tensor_product_ids)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-valid_dataset = CreateDataset(valid_tensor,valid_tensor_product_ids)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-#test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+train_dataset = CreateDataset(train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
 batch_size = 1024
 
 dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
 
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
-valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
+valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
-#test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
 
 with open(r"Data/Preprocessed/number_uniques_dict.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
@@ -91,11 +88,11 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         return torch.sigmoid(x.squeeze(1))
 
 embedding_dim = 16
-DeepFMModel = DeepFactorizationMachineModel(field_dims = df.columns, embed_dim=embedding_dim, mlp_dims=[16,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
+DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
 optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.005)
 loss_fn = torch.nn.BCELoss()
 
-num_epochs = 10
+num_epochs = 2
 
 Loss_list = []
 Valid_Loss_list = []
@@ -106,31 +103,100 @@ for epoch in range(1,num_epochs+1):
     epoch_loss = []
     DeepFMModel.train()
 
-    for batch, data in enumerate(train_loader):
-
-        dataset = data[0]
-        targets = data[1].float()
+    for batch, (X,y) in enumerate(train_loader):
+        #dataset = data[0]
+        #targets = data[1].float()
         # Zero your gradients for every batch!
         optimizer.zero_grad()
         #
-        dataset = dataset.to(device)
+        dataset = X.to(device)
         # Make predictions for this batch
         outputs = DeepFMModel(dataset)
-        #print(outputs.shape)
-        #output = torch.squeeze(outputs, 1)
-        #print(output.shape)
         # Compute the loss and its gradients
-        loss = loss_fn(outputs,targets.squeeze(1).to(device))
+        if(outputs < 0 or outputs > 1):
+            print("output is not between 0 and 1:", outputs)
+            continue
+        if(y < 0 or y > 1):
+            print("output is not between 0 and 1:", outputs)
+            continue
+        loss = loss_fn(outputs,y.squeeze().to(device))
         loss.backward()
+        # Adjust learning weights
+        optimizer.step()
 
+            # Gather data and report
+        epoch_loss.append(loss.item())
+        if(batch % 100 == 0):
+            print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
+
+    if(epoch % 1 == 0):
+        print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
+        
+        epoch_loss.append(loss.item())
+    epoch_loss_value = np.mean(epoch_loss)
+    Loss_list.append(epoch_loss_value)
+    DeepFMModel.eval()
+    epoch_valid_loss = []
+    for batch, (X_valid,y_valid) in enumerate(valid_loader):
+
+        outputs = DeepFMModel(X_valid)
+        if(outputs < 0 or outputs > 1):
+            print("output is not between 0 and 1:", outputs)
+            continue
+        if(y_valid < 0 or y_valid > 1):
+            print("output is not between 0 and 1:", outputs)
+            continue
+        loss = loss_fn(outputs,y_valid.squeeze())
+        epoch_valid_loss.append(loss.item())
+    if(epoch % 1 == 0):
+        print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
+
+    epoch_valid_loss_value = np.mean(epoch_valid_loss)
+    Valid_Loss_list.append(epoch_valid_loss_value)
+    if(epoch_valid_loss_value < Best_loss):
+        best_model = DeepFMModel
+        Best_loss = epoch_valid_loss_value
+#torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
+PATH = 'Models/DeepFM_model.pth'
+torch.save(best_model, PATH)
+
+print("finished training")
+print("Loss list = ", Loss_list)
+
+"""
+num_epochs = 10
+k = 100
+Loss_list = []
+Valid_Loss_list = []
+Best_loss = np.infty
+for epoch in range(1,num_epochs+1):
+    print(epoch)
+    running_loss = 0.
+    epoch_loss = []
+    DeepFMModel.eval()
+    RankingModel.train()
+    for batch, (X,y) in enumerate(train_loader):
+        #dataset = data[0]
+        #targets = data[1].float()
+        # Zero your gradients for every batch!
+        optimizer.zero_grad()
+        #
+        dataset = X.to(device)
+        # Make predictions for this batch
+        candidates = DeepFMModel(dataset)
+        candidates = np.argsort(candidates)[-k:]
+        data = X[candidates]
+        rankings = RankingModel(candidates)
+
+        # Compute the loss and its gradients
+        loss = loss_fn(rankings,targets.squeeze().to(device))
+        loss.backward()
         # Adjust learning weights
         optimizer.step()
 
             # Gather data and report
         epoch_loss.append(loss.item())
     if(epoch % 1 == 0):
-        print("The model output: ",outputs)
-        print("The Target", targets)
 
         print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
         
@@ -139,24 +205,41 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     DeepFMModel.eval()
     epoch_valid_loss = []
-    for batch, valid_data in enumerate(valid_loader):
+    for batch, (X_valid,y_valid) in enumerate(valid_loader):
 
-        dataset = valid_data[0]
-        targets = valid_data[1].float()
-        outputs = DeepFMModel(dataset)
-        loss = loss_fn(outputs,targets.squeeze(1).to(device))
+        outputs = DeepFMModel(X_valid)
+        loss = loss_fn(outputs,y_valid.squeeze())
         epoch_valid_loss.append(loss.item())
     if(epoch % 1 == 0):
-        print(outputs.shape)
         print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
+
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
         best_model = DeepFMModel
         Best_loss = epoch_valid_loss_value
-#torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
-#PATH = 'Models/DeepFM_model.pth'
-#torch.save(best_model, PATH)
 
-print("finished training")
-print("Loss list = ", Loss_list)
+"""
+
+
+##test:
+# 1 iteration:
+
+dataiter = iter(test_loader)
+X, y = next(dataiter)
+
+output = DeepFMModel(X)
+
+predictions = []
+for i in output:
+    if i < 0.5:
+        predictions.append(0)
+    else:
+        predictions.append(1)
+
+print("The output of the model is: ", predictions)
+
+print("The true labels are: ", y)
+
+print("The accuracy of the model on 1 iterations is:", torch.sum(y.squeeze()-torch.tensor(predictions, dtype = torch.int))/len(y)*100,"%")
+
