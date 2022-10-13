@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 import numpy as np 
 import pandas as pd
@@ -7,6 +6,7 @@ import pickle
 from sklearn import preprocessing
 import copy
 import random
+from CreateNegativeSamples import CreateNegativeSamples
 #import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder
@@ -107,16 +107,6 @@ articles_df['index_group_name'] = Index_encoder.transform(articles_df[['index_gr
 # Save the csv file wihtout the detalied descritption if we need later
 articles_df[['article_id','prod_name','product_type_name','graphical_appearance_name','colour_group_name','department_name','index_group_name']].to_csv('Data/Preprocessed/article_df_numeric.csv',index=False)
 
-
- 
-
-# check for NaN
-percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_values(ascending = False)
-
-
-
-
-
 ############################# Preprocess transaction train dataframe
 transactions_df_original = pd.read_csv(data_path+'transactions_train.csv')
 transactions_df = copy.deepcopy(transactions_df_original)
@@ -137,10 +127,11 @@ transactions_df['day'] =  pd.DatetimeIndex(transactions_df['t_dat']).day
 transactions_df['month'] =  pd.DatetimeIndex(transactions_df['t_dat']).month
 transactions_df['year'] =  pd.DatetimeIndex(transactions_df['t_dat']).year
 transactions_df = transactions_df.drop(['t_dat'], axis = 1)
+transactions_df['price'] = transactions_df['price'].round(decimals=4)
 
 # Divide into train, valid and test
-splitrange = round(0.75*len(transactions_df['customer_id']))
-splitrange2 = round(0.95*len(transactions_df['customer_id']))
+splitrange = round(0.8*len(transactions_df['customer_id']))
+splitrange2 = round(0.975*len(transactions_df['customer_id']))
 train = transactions_df.iloc[:splitrange]
 valid = transactions_df.iloc[splitrange+1:splitrange2]
 test = transactions_df.iloc[splitrange2:]
@@ -170,11 +161,9 @@ transactions_df.loc[(transactions_df['month'] >= 9) & (transactions_df['month'] 
 transactions_df['customer_id'] = Customer_id_Encoder.transform(transactions_df[['customer_id']])
 transactions_df['article_id'] = article_id_Encoder.transform(transactions_df[['article_id']])
 
-train['price'] = train['price'].round(decimals=4)
-transactions_df['price'] = transactions_df['price'].round(decimals=4)
 num_prices = train['price'].nunique()
 Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prices+1).fit(train[['price']])
-#transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
+transactions_df['price'] = Price_encoder.transform(transactions_df[['price']].to_numpy().reshape(-1, 1))
 
 #train['customer_id'] = Customer_id_Encoder.transform(train[['customer_id']].to_numpy().reshape(-1, 1))
 #train['article_id'] = article_id_Encoder.transform(train[['article_id']].to_numpy().reshape(-1, 1))
@@ -182,77 +171,7 @@ map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
 transactions_df['season'] = transactions_df['season'].map(map_season)
 
-
-train = transactions_df.iloc[:splitrange]
-valid = transactions_df.iloc[splitrange+1:splitrange2]
-test = transactions_df.iloc[splitrange2:]
-
-
-unique_train_customers = train.customer_id.unique()
-unique_train_articles = train.article_id.unique()
-
-num_negative = 100
-interactions_list = []
-for c in unique_train_customers:
-    for i in range(num_negative):
-        item = random.choice(unique_train_articles)
-        interactions_list.append([c,item,0])
-
-negative_df = pd.DataFrame(data = interactions_list, columns = ['customer_id','article_id','negative_values'])
-negative_df['day'] = np.random.randint(1, 28, negative_df.shape[0])
-negative_df['month'] = np.random.randint(1, 12, negative_df.shape[0])
-#negative_df['year'] = np.random.randint(0, transactions_df.year.unique().max(), negative_df.shape[0])
-negative_df['year'] = np.zeros(negative_df.shape[0])
-
-negative_df.loc[(negative_df['month']>= 1) & (negative_df['month'] <=2), 'season'] = 'Winter'
-negative_df.loc[(negative_df['month'] == 12), 'season'] = 'Winter' 
-negative_df.loc[(negative_df['month'] >= 3) & (negative_df['month'] <=5), 'season'] = 'Spring' 
-negative_df.loc[(negative_df['month'] >= 6) & (negative_df['month'] <=8),'season'] = 'Summer' 
-negative_df.loc[(negative_df['month'] >= 9) & (negative_df['month'] <=11), 'season'] = 'Autumn' 
-negative_df['season'] = negative_df['season'].map(map_season)
-
-
-temp = train[['article_id','price','sales_channel_id']].groupby(['article_id']).mean().reset_index()
-temp['sales_channel_id'] = temp['sales_channel_id'].round()
-temp['price'] = temp['price'].round(decimals=4)
-
-negative_df = negative_df.merge(temp, on = 'article_id', how = 'left')
-
-train = train.merge(negative_df, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
-train = train[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
 num_sales_channels = transactions_df.sales_channel_id.nunique()
-
-
-train = train.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
-train = train.merge(customer_df, how = 'left', on ='customer_id')
-
-valid = valid.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
-valid = valid.merge(customer_df, how = 'left', on ='customer_id')
-
-test = test.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
-test = test.merge(customer_df, how = 'left', on ='customer_id')
-
-train = train[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
-       'month', 'year', 'season', 'prod_name', 'product_type_name',
-       'graphical_appearance_name', 'colour_group_name', 'department_name',
-       'index_group_name', 'FN', 'Active', 'club_member_status',
-       'fashion_news_frequency', 'age', 'postal_code','target']]
-
-valid = valid[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
-       'month', 'year', 'season', 'prod_name', 'product_type_name',
-       'graphical_appearance_name', 'colour_group_name', 'department_name',
-       'index_group_name', 'FN', 'Active', 'club_member_status',
-       'fashion_news_frequency', 'age', 'postal_code','target']]
-
-test = test[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
-       'month', 'year', 'season', 'prod_name', 'product_type_name',
-       'graphical_appearance_name', 'colour_group_name', 'department_name',
-       'index_group_name', 'FN', 'Active', 'club_member_status',
-       'fashion_news_frequency', 'age', 'postal_code','target']]
-
-train.to_csv('Data/Preprocessed/train_df.csv', index = False)
-valid.to_csv('Data/Preprocessed/valid_df.csv', index=False)
-test.to_csv('Data/Preprocessed/test_df.csv', index = False)
 
 number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_products+1, 'n_departments':num_departments+1, 'n_colours': num_colours+1, 'n_prod_names' : num_prod_names+1,
                         'n_prod_type_names': num_prod_type_names, 'n_graphical':num_graphical, 'n_index' : num_index, 'n_postal':num_postal, 'n_fashion_news_frequency': 3+1, 'n_FN' : 2+1, 
@@ -278,102 +197,173 @@ pickle.dump(postal_code_Encoder, open('Models/Postal_Code_Encoder.sav', 'wb'))
 pickle.dump(Year_encoder, open('Models/Year_Encoder.sav', 'wb'))
 
 
-### customer_id, article_id, price, sales_channel_id, season, day, month, year
-### prod_name, product_type_name, graphical_appearance_name, 'colour_group_name, department_name, index_group_name
-### FN, Active, club_member_status, fashion_news_frequency, age, postal_code
+def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
+    if(Method == 'FM'):
 
-# Find the mean price of each article in transactions df and decode price
-article_id_aggregated = transactions_df[['article_id','price']].groupby(by = 'article_id').mean().reset_index()
-article_id_aggregated['price'] = Price_encoder.transform(article_id_aggregated[['price']])
-# Find the most used features for each article in transactions df
-Most_frequent_sales_channel = transactions_df.groupby('article_id')['sales_channel_id'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_season = transactions_df.groupby('article_id')['season'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_day = transactions_df.groupby('article_id')['day'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_month = transactions_df.groupby('article_id')['month'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_year = transactions_df.groupby('article_id')['year'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        train = transactions_df.iloc[:splitrange]
+        valid = transactions_df.iloc[splitrange+1:splitrange2]
+        test = transactions_df.iloc[splitrange2:]
 
-# Merge with the customer df
-transactions_df_enriched = transactions_df.merge(customer_df, how = 'left', on = 'customer_id')
-# Get he mean age for each article
-article_id_aggregated_v2 = transactions_df_enriched[['article_id','age']].groupby('article_id').mean().reset_index()
-# Find the most used features from customer for each article in customer df
-Most_frequent_FN = transactions_df_enriched.groupby('article_id')['FN'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_Active = transactions_df_enriched.groupby('article_id')['Active'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_club_member_status = transactions_df_enriched.groupby('article_id')['club_member_status'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_fashion_news_frequency = transactions_df_enriched.groupby('article_id')['fashion_news_frequency'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_postal_code = transactions_df_enriched.groupby('article_id')['postal_code'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        negative_df = CreateNegativeSamples(train, train, 100, type_df = 'Train', method = 'Random_choices')
 
-# Merge all dataframe so we have one dataframe with preprossed numerical features for articles and all most frequent features
-Product_preprocessed_model_df = transactions_df[['article_id']]
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(articles_df.drop(['detail_desc'], axis = 1), how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(article_id_aggregated, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_sales_channel, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_season, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_day, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_month, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_year, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(article_id_aggregated_v2, how='left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_FN, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_Active, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
-Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
+        train = train.merge(negative_df, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
+        train = train[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
 
-Product_df_preprocessed = deepcopy(articles_df)
-Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_sales_channel, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_season, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_day, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_month, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_year, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated_v2, how='left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_FN, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_Active, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
-Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
 
-# Save the merged dataframe
-Product_preprocessed_model_df.to_csv('Data/Preprocessed/FinalProductDataFrame.csv', index = False)
-Product_df_preprocessed.to_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv', index = False)
+        train = train.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+        train = train.merge(customer_df, how = 'left', on ='customer_id')
 
-# We do the same for all customer
-customer_id_aggregated = transactions_df_enriched[['customer_id','price']].groupby('customer_id').mean().reset_index()
-customer_id_aggregated['price'] = Price_encoder.transform(customer_id_aggregated[['price']])
-Most_frequent_sales_channel = transactions_df.groupby('customer_id')['sales_channel_id'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_season = transactions_df.groupby('customer_id')['season'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_day = transactions_df.groupby('customer_id')['day'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_month = transactions_df.groupby('customer_id')['month'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_year = transactions_df.groupby('customer_id')['year'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        valid = valid[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
+        valid = valid.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+        valid = valid.merge(customer_df, how = 'left', on ='customer_id')
 
-transactions_df_enriched = transactions_df.merge(articles_df, how = 'left', on = 'article_id')
 
-# Most used features for all customers
-Most_frequent_prod_name = transactions_df_enriched.groupby('customer_id')['prod_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_product_type_name = transactions_df_enriched.groupby('customer_id')['product_type_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_graphical_appearance_name = transactions_df_enriched.groupby('customer_id')['graphical_appearance_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_colour_group_name = transactions_df_enriched.groupby('customer_id')['colour_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_department_name = transactions_df_enriched.groupby('customer_id')['department_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
-Most_frequent_index_group_name = transactions_df_enriched.groupby('customer_id')['index_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        negative_df_test = CreateNegativeSamples(test, train, num_products, type_df='Test', method = 'Random_choices')
 
-# Merge all dataframe so we have one dataframe with preprossed numerical features for customer and all most frequent features
-Customer_preprocessed_model_df = transactions_df[['customer_id']]
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(customer_df, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(customer_id_aggregated, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_sales_channel, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_season, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_day, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_month, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_year, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_prod_name, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_product_type_name, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_graphical_appearance_name, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_colour_group_name, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_department_name, how = 'left', on = 'customer_id')
-Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_index_group_name, how = 'left', on = 'customer_id')
-# Save it
-Customer_preprocessed_model_df.to_csv('Data/Preprocessed/FinalCustomerDataFrame.csv', index = False)
+        test_with_negative = test.merge(negative_df_test, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
+        test_with_negative = test_with_negative[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
+        test_with_negative = test_with_negative.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+        test_with_negative = test_with_negative.merge(customer_df, how = 'left', on ='customer_id')
 
-# Save the transactions df aswell
-#transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
-#transactions_df.to_csv('Data/Preprocessed/transactions_df_numeric.csv', index = False)
+        test = test[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
+        test = test.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+        test = test.merge(customer_df, how = 'left', on ='customer_id')
+
+        train = train[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+            'month', 'year', 'season', 'prod_name', 'product_type_name',
+            'graphical_appearance_name', 'colour_group_name', 'department_name',
+            'index_group_name', 'FN', 'Active', 'club_member_status',
+            'fashion_news_frequency', 'age', 'postal_code','target']]
+
+        valid = valid[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+            'month', 'year', 'season', 'prod_name', 'product_type_name',
+            'graphical_appearance_name', 'colour_group_name', 'department_name',
+            'index_group_name', 'FN', 'Active', 'club_member_status',
+            'fashion_news_frequency', 'age', 'postal_code','target']]
+
+        test = test[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+            'month', 'year', 'season', 'prod_name', 'product_type_name',
+            'graphical_appearance_name', 'colour_group_name', 'department_name',
+            'index_group_name', 'FN', 'Active', 'club_member_status',
+            'fashion_news_frequency', 'age', 'postal_code','target']]
+
+        test_with_negative = test_with_negative[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+            'month', 'year', 'season', 'prod_name', 'product_type_name',
+            'graphical_appearance_name', 'colour_group_name', 'department_name',
+            'index_group_name', 'FN', 'Active', 'club_member_status',
+            'fashion_news_frequency', 'age', 'postal_code','target']]
+
+        train.to_csv('Data/Preprocessed/train_df.csv', index = False)
+        valid.to_csv('Data/Preprocessed/valid_df.csv', index=False)
+        test.to_csv('Data/Preprocessed/test_df.csv', index = False)
+        test_with_negative.to_csv('Data/Preprocessed/test_with_negative.csv', index = False)
+        print('Dataframes for a Factorization Machine model have been saved')
+
+
+    elif(Method == 'MF'):
+        ### customer_id, article_id, price, sales_channel_id, season, day, month, year
+        ### prod_name, product_type_name, graphical_appearance_name, 'colour_group_name, department_name, index_group_name
+        ### FN, Active, club_member_status, fashion_news_frequency, age, postal_code
+
+        # Find the mean price of each article in transactions df and decode price
+        article_id_aggregated = transactions_df[['article_id','price']].groupby(by = 'article_id').mean().reset_index()
+        article_id_aggregated['price'] = Price_encoder.transform(article_id_aggregated[['price']])
+        # Find the most used features for each article in transactions df
+        Most_frequent_sales_channel = transactions_df.groupby('article_id')['sales_channel_id'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_season = transactions_df.groupby('article_id')['season'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_day = transactions_df.groupby('article_id')['day'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_month = transactions_df.groupby('article_id')['month'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_year = transactions_df.groupby('article_id')['year'].apply(lambda x: x.value_counts().index[0]).reset_index()
+
+        # Merge with the customer df
+        transactions_df_enriched = transactions_df.merge(customer_df, how = 'left', on = 'customer_id')
+        # Get he mean age for each article
+        article_id_aggregated_v2 = transactions_df_enriched[['article_id','age']].groupby('article_id').mean().reset_index()
+        # Find the most used features from customer for each article in customer df
+        Most_frequent_FN = transactions_df_enriched.groupby('article_id')['FN'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_Active = transactions_df_enriched.groupby('article_id')['Active'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_club_member_status = transactions_df_enriched.groupby('article_id')['club_member_status'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_fashion_news_frequency = transactions_df_enriched.groupby('article_id')['fashion_news_frequency'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_postal_code = transactions_df_enriched.groupby('article_id')['postal_code'].apply(lambda x: x.value_counts().index[0]).reset_index()
+
+        # Merge all dataframe so we have one dataframe with preprossed numerical features for articles and all most frequent features
+        Product_preprocessed_model_df = transactions_df[['article_id']]
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(articles_df.drop(['detail_desc'], axis = 1), how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(article_id_aggregated, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_sales_channel, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_season, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_day, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_month, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_year, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(article_id_aggregated_v2, how='left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_FN, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_Active, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
+        Product_preprocessed_model_df = Product_preprocessed_model_df.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
+
+        Product_df_preprocessed = deepcopy(articles_df)
+        Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_sales_channel, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_season, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_day, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_month, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_year, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(article_id_aggregated_v2, how='left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_FN, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_Active, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_club_member_status, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_fashion_news_frequency, how = 'left', on = 'article_id')
+        Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
+
+        # Save the merged dataframe
+        Product_preprocessed_model_df.to_csv('Data/Preprocessed/FinalProductDataFrame.csv', index = False)
+        Product_df_preprocessed.to_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv', index = False)
+
+        # We do the same for all customer
+        customer_id_aggregated = transactions_df_enriched[['customer_id','price']].groupby('customer_id').mean().reset_index()
+        customer_id_aggregated['price'] = Price_encoder.transform(customer_id_aggregated[['price']])
+        Most_frequent_sales_channel = transactions_df.groupby('customer_id')['sales_channel_id'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_season = transactions_df.groupby('customer_id')['season'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_day = transactions_df.groupby('customer_id')['day'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_month = transactions_df.groupby('customer_id')['month'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_year = transactions_df.groupby('customer_id')['year'].apply(lambda x: x.value_counts().index[0]).reset_index()
+
+        transactions_df_enriched = transactions_df.merge(articles_df, how = 'left', on = 'article_id')
+
+        # Most used features for all customers
+        Most_frequent_prod_name = transactions_df_enriched.groupby('customer_id')['prod_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_product_type_name = transactions_df_enriched.groupby('customer_id')['product_type_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_graphical_appearance_name = transactions_df_enriched.groupby('customer_id')['graphical_appearance_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_colour_group_name = transactions_df_enriched.groupby('customer_id')['colour_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_department_name = transactions_df_enriched.groupby('customer_id')['department_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        Most_frequent_index_group_name = transactions_df_enriched.groupby('customer_id')['index_group_name'].apply(lambda x: x.value_counts().index[0]).reset_index()
+
+        # Merge all dataframe so we have one dataframe with preprossed numerical features for customer and all most frequent features
+        Customer_preprocessed_model_df = transactions_df[['customer_id']]
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(customer_df, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(customer_id_aggregated, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_sales_channel, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_season, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_day, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_month, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_year, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_prod_name, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_product_type_name, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_graphical_appearance_name, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_colour_group_name, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_department_name, how = 'left', on = 'customer_id')
+        Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_index_group_name, how = 'left', on = 'customer_id')
+        # Save it
+        Customer_preprocessed_model_df.to_csv('Data/Preprocessed/FinalCustomerDataFrame.csv', index = False)
+
+        # Save the transactions df aswell
+        #transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
+        #transactions_df.to_csv('Data/Preprocessed/transactions_df_numeric.csv', index = False)
+        print('Dataframes for a Matrix Factorization model have been saved')
+
+
+## Call the "GetPreprocessedDF" function with parameter: "method == 'FM'" to get dataframes for a Factorization machine model.
+## Call the "GetPreprocessedDF" function with parameter: "method == 'MF'" to get dataframes for a Matrix Factorization model.
+
+GetPreprocessedDF(Method = 'FM')

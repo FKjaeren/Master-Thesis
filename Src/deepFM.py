@@ -22,21 +22,11 @@ class CreateDataset(Dataset):
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-"""
-customers = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[0:130000]
 
-products = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[0:130000]
-
-df = pd.read_csv('Data/Preprocessed/AllDataOneTable.csv')[0:130000]
-"""
-#product_ids = products[['article_id']]
 
 train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:600000]
 valid_df = pd.read_csv('Data/Preprocessed/valid_df.csv')
 test_df = pd.read_csv('Data/Preprocessed/test_df.csv')
-
-#train_tensor_product_ids = torch.tensor(train_product_ids.fillna(0).to_numpy(), dtype = torch.int)
-#valid_tensor_product_ids = torch.tensor(valid_products_ids.fillna(0).to_numpy(), dtype = torch.int)
 
 device = torch.device('cpu')
 
