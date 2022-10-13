@@ -1,4 +1,3 @@
-
 import random
 import torch
 import pandas as pd
@@ -6,6 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torch import nn
 import pickle
+import copy
 from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
 
 class CreateDataset(Dataset):
@@ -31,7 +31,7 @@ df = pd.read_csv('Data/Preprocessed/AllDataOneTable.csv')[0:130000]
 """
 #product_ids = products[['article_id']]
 
-train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:3000000]
+train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:600000]
 valid_df = pd.read_csv('Data/Preprocessed/valid_df.csv')
 test_df = pd.read_csv('Data/Preprocessed/test_df.csv')
 
@@ -82,14 +82,22 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         embed_x = self.embedding(x)
+        if(torch.isnan(embed_x).sum() > 0):
+            print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
+        if(torch.isnan(self.fm(embed_x)).sum() > 0):
+            print("Values with nan in fm output: ",self.fm(embed_x)[torch.isnan(self.fm(embed_x))])
+        if(torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim))).sum() > 0):
+            print("Values with nan in mlp output: ",self.mlp(embed_x.view(-1, self.embed_output_dim))[torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim)))])
         #x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         x = self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
+        if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
+            print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
         return torch.sigmoid(x.squeeze(1))
 
 embedding_dim = 16
 DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
-optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.005)
+optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.002)
 loss_fn = torch.nn.BCELoss()
 
 num_epochs = 2
@@ -112,12 +120,17 @@ for epoch in range(1,num_epochs+1):
         dataset = X.to(device)
         # Make predictions for this batch
         outputs = DeepFMModel(dataset)
+        if(torch.isnan(X).sum() > 0):
+            print("SE her Values with nan in X: ",X[torch.isnan(X)])
+        if(torch.isnan(outputs).sum() > 0):
+            print("Values with nan in outputs: ",outputs[torch.isnan(outputs)])
+            print("And the batch is: ", batch)
         # Compute the loss and its gradients
-        if(outputs < 0 or outputs > 1):
-            print("output is not between 0 and 1:", outputs)
+        if(min(outputs) <= 0 or max(outputs) >= 1):
+            print("output is not target 0 and 1:", outputs)
             continue
-        if(y < 0 or y > 1):
-            print("output is not between 0 and 1:", outputs)
+        if(min(y) < 0 or max(y) > 1):
+            print("target is not between 0 and 1:", outputs)
             continue
         loss = loss_fn(outputs,y.squeeze().to(device))
         loss.backward()
@@ -138,23 +151,23 @@ for epoch in range(1,num_epochs+1):
     DeepFMModel.eval()
     epoch_valid_loss = []
     for batch, (X_valid,y_valid) in enumerate(valid_loader):
-
+        print('test1')
         outputs = DeepFMModel(X_valid)
-        if(outputs < 0 or outputs > 1):
+        if(min(outputs) < 0 or max(outputs) > 1):
             print("output is not between 0 and 1:", outputs)
             continue
-        if(y_valid < 0 or y_valid > 1):
+        if(min(y_valid) < 0 or max(y_valid) > 1):
             print("output is not between 0 and 1:", outputs)
             continue
         loss = loss_fn(outputs,y_valid.squeeze())
         epoch_valid_loss.append(loss.item())
     if(epoch % 1 == 0):
         print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
-
+    print('test2')
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
-        best_model = DeepFMModel
+        best_model = copy.deepcopy(DeepFMModel)
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 PATH = 'Models/DeepFM_model.pth'

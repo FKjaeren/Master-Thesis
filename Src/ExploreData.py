@@ -130,7 +130,7 @@ articles_df['index_group_name'] = Index_encoder.transform(articles_df[['index_gr
 
 
 
-percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_values(ascending = False)
+#percent_a = (articles_df.isnull().sum()/articles_df.isnull().count()*100).sort_values(ascending = False)
 
 
 
@@ -145,7 +145,6 @@ transactions_df = copy.deepcopy(transactions_df_original)
 
 transactions_df = transactions_df[transactions_df['t_dat']>'2019-09-21']
 
-#transactions_df = transactions_df.iloc[-300000:].reset_index().drop(['index'],axis = 1)
 
 #datetime and create a day, month and year column
 transactions_df.t_dat = pd.to_datetime(transactions_df.t_dat)
@@ -210,7 +209,13 @@ train = train.merge(customers, how = 'left', on ='customer_id')
 
 from scipy.stats import chi2_contingency
 
+train_sub = train.drop(['customer_id'], axis = 1).iloc[-1450000:].reset_index().drop(['index'],axis = 1)
 
+## We drop article_id and postal_code as we know there is no features simmilar to them, and therefore we will keep them for sure.
+## We will drop every feature which is the enumerated version of a feature e.g. drop product_type_no when we have product_type_name
+
+train_sub = train_sub.drop(['article_id','postal_code','product_type_no','graphical_appearance_no','perceived_colour_value_id','perceived_colour_master_id','department_no',
+                            'index_code','index_group_no','section_no','garment_group_no','colour_group_code','product_code'], axis = 1)
 
 
 def cramers_V(var1,var2) :
@@ -224,27 +229,39 @@ def cramers_V(var1,var2) :
 
 rows= []
 
-for var1 in train:
+for var1 in train_sub:
   col = []
-  for var2 in train:
-    print(train[[var1]].columns)
-    print(train[[var2]].columns)
-    cramers =cramers_V(train[var1], train[var2]) # Cramer's V test
+  for var2 in train_sub:
+    cramers =cramers_V(train_sub[var1], train_sub[var2]) # Cramer's V test
     col.append(round(cramers,2)) # Keeping of the rounded value of the Cramer's V  
   rows.append(col)
   
 cramers_results = np.array(rows)
-df = pd.DataFrame(cramers_results, columns = train.columns, index =train.columns)
+df = pd.DataFrame(cramers_results, columns = train_sub.columns, index =train_sub.columns)
 
 
+columns_list = df.columns
+df[columns_list[20:]]
 
-df
+## Product_type_name og product_group_name har en cramer værdi på 0.99 og derfor vælger vi en af disse (product_type_name)
 
+## We will drop "perceived_colour_master_name" and "perceived_colour_value_name". From based on a mixture of Cramer values and a deeper dive into the variable. The Cramer values are 0.66 and 0.72
+## Which isn't enough to drop the features, but diving deeper into the values we see that colour_group_name is a more nuancer version of the two others. E.g. Black in colour group name is always "Dark"
+## In "perceived_colour_value_name" but the features still only have a Cramer value of 0.66 because a "colour_group_name" value of "dark red" is also "dark" in "perceived_colour_value_name".
 
+## Index_name and index_group_name have a Cramer value of 0.96 and 0.93 with "Department_name" and will therefore be dropped as it reached a threshould of over 0.9.
+## Garmet_group name will also be dropped as it have a 1.0 Cramer value with "Department_name"
 
+## FN and Active will be dropped as it has Cramer Values of 0.99 and 0.97 with "fashion_news_frequency"
 
-valid = valid.merge(articles_df, on = 'article_id', how = 'left')
-valid = valid.merge(customers, how = 'left', on ='customer_id')
+## This leaves is with:
 
-test = test.merge(articles_df, on = 'article_id', how = 'left')
-test = test.merge(customers, how = 'left', on ='customer_id')
+#       'customer_id','article_id,'price', 'sales_channel_id', 'day', 'month', 'year', 'season', 'prod_name', 'product_type_name',
+#       'graphical_appearance_name', 'colour_group_name','department_name', 'section_name' ?,'club_member_status',
+#       'fashion_news_frequency', 'age'
+
+#valid = valid.merge(articles_df, on = 'article_id', how = 'left')
+#valid = valid.merge(customers, how = 'left', on ='customer_id')
+
+#test = test.merge(articles_df, on = 'article_id', how = 'left')
+#test = test.merge(customers, how = 'left', on ='customer_id')
