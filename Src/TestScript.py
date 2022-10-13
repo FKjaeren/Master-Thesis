@@ -9,7 +9,6 @@ from Src.ReadData import *
 
 device = torch.device("cpu")
 
-from Src.BaselineFMModel import RecSysModel
 PATH = 'Models/Baseline_MulitDim_model.pth'
 
 

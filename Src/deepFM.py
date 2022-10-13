@@ -74,7 +74,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         #self.linear = FeaturesLinear(field_dims)
         self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-        self.embed_output_dim = len(field_dims) * embed_dim
+        self.embed_output_dim = (len(field_dims)-1) * embed_dim
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
 
     def forward(self, x):
@@ -94,13 +94,17 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
             print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
         return torch.sigmoid(x.squeeze(1))
+    def Reccomend_topk(x, k):
+        item_idx = torch.topk(x,k)
+        return item_idx
+
 
 embedding_dim = 16
-DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
+DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,32,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
 optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.002)
-loss_fn = torch.nn.BCELoss()
+loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(95.0))
 
-num_epochs = 2
+num_epochs = 5
 
 Loss_list = []
 Valid_Loss_list = []
@@ -112,8 +116,7 @@ for epoch in range(1,num_epochs+1):
     DeepFMModel.train()
 
     for batch, (X,y) in enumerate(train_loader):
-        #dataset = data[0]
-        #targets = data[1].float()
+
         # Zero your gradients for every batch!
         optimizer.zero_grad()
         #
@@ -126,12 +129,7 @@ for epoch in range(1,num_epochs+1):
             print("Values with nan in outputs: ",outputs[torch.isnan(outputs)])
             print("And the batch is: ", batch)
         # Compute the loss and its gradients
-        if(min(outputs) <= 0 or max(outputs) >= 1):
-            print("output is not target 0 and 1:", outputs)
-            continue
-        if(min(y) < 0 or max(y) > 1):
-            print("target is not between 0 and 1:", outputs)
-            continue
+
         loss = loss_fn(outputs,y.squeeze().to(device))
         loss.backward()
         # Adjust learning weights
@@ -151,19 +149,11 @@ for epoch in range(1,num_epochs+1):
     DeepFMModel.eval()
     epoch_valid_loss = []
     for batch, (X_valid,y_valid) in enumerate(valid_loader):
-        print('test1')
         outputs = DeepFMModel(X_valid)
-        if(min(outputs) < 0 or max(outputs) > 1):
-            print("output is not between 0 and 1:", outputs)
-            continue
-        if(min(y_valid) < 0 or max(y_valid) > 1):
-            print("output is not between 0 and 1:", outputs)
-            continue
         loss = loss_fn(outputs,y_valid.squeeze())
         epoch_valid_loss.append(loss.item())
     if(epoch % 1 == 0):
         print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
-    print('test2')
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
@@ -254,5 +244,5 @@ print("The output of the model is: ", predictions)
 
 print("The true labels are: ", y)
 
-print("The accuracy of the model on 1 iterations is:", torch.sum(y.squeeze()-torch.tensor(predictions, dtype = torch.int))/len(y)*100,"%")
+print("The accuracy of the model on 1 iterations is:", (1-(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100,"%")
 
