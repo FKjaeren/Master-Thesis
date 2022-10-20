@@ -199,12 +199,14 @@ pickle.dump(Year_encoder, open('Models/Year_Encoder.sav', 'wb'))
 
 def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
     if(Method == 'FM'):
+        splitrange = round(0.8*len(transactions_df['customer_id']))
+        splitrange2 = round(0.975*len(transactions_df['customer_id']))
 
         train = transactions_df.iloc[:splitrange]
         valid = transactions_df.iloc[splitrange+1:splitrange2]
         test = transactions_df.iloc[splitrange2:]
 
-        negative_df = CreateNegativeSamples(train, train, 100, type_df = 'Train', method = 'Random_choices')
+        negative_df = CreateNegativeSamples(train, train, 50, type_df = 'Train', method = 'Random_choices')
 
         train = train.merge(negative_df, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
         train = train[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
