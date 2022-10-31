@@ -6,7 +6,7 @@ import pickle
 from sklearn import preprocessing
 import copy
 import random
-from CreateNegativeSamples import CreateNegativeSamples
+from Src.CreateNegativeSamples import CreateNegativeSamples
 #import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder
@@ -141,7 +141,7 @@ num_days = transactions_df.day.nunique()
 num_months = transactions_df.month.nunique()
 num_year = transactions_df.year.nunique()
 
-Year_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_year+1).fit(train[['year']])
+Year_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_year+1).fit(train[['year']].to_numpy().reshape(-1, 1))
 train['year'] = Year_encoder.transform(train[['year']].to_numpy().reshape(-1, 1))
 valid['year'] = Year_encoder.transform(valid[['year']].to_numpy().reshape(-1, 1))
 test['year'] = Year_encoder.transform(test[['year']].to_numpy().reshape(-1, 1))
@@ -158,11 +158,11 @@ transactions_df.loc[(transactions_df['month'] >= 9) & (transactions_df['month'] 
 
 
 # Encode customer, price and article and map values in season
-transactions_df['customer_id'] = Customer_id_Encoder.transform(transactions_df[['customer_id']])
-transactions_df['article_id'] = article_id_Encoder.transform(transactions_df[['article_id']])
+transactions_df['customer_id'] = Customer_id_Encoder.transform(transactions_df[['customer_id']].to_numpy().reshape(-1, 1))
+transactions_df['article_id'] = article_id_Encoder.transform(transactions_df[['article_id']].to_numpy().reshape(-1, 1))
 
 num_prices = train['price'].nunique()
-Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prices+1).fit(train[['price']])
+Price_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_prices+1).fit(train[['price']].to_numpy().reshape(-1, 1))
 transactions_df['price'] = Price_encoder.transform(transactions_df[['price']].to_numpy().reshape(-1, 1))
 
 #train['customer_id'] = Customer_id_Encoder.transform(train[['customer_id']].to_numpy().reshape(-1, 1))
@@ -198,6 +198,7 @@ pickle.dump(Year_encoder, open('Models/Year_Encoder.sav', 'wb'))
 
 
 def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
+    print('test')
     if(Method == 'FM'):
         splitrange = round(0.8*len(transactions_df['customer_id']))
         splitrange2 = round(0.975*len(transactions_df['customer_id']))
@@ -368,4 +369,4 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'FM'" to get dataframes for a Factorization machine model.
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'MF'" to get dataframes for a Matrix Factorization model.
 
-GetPreprocessedDF(Method = 'FM')
+GetPreprocessedDF(transactions_df,Method = 'FM')
