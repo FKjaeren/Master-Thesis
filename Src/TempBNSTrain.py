@@ -80,7 +80,7 @@ popularity_temp = pd.DataFrame(i_list).rename({0:'article_id'},axis=1).merge(pop
 popularity[:] = popularity_temp['counts']
 
 prior = popularity/sum(popularity)
-
+"""
 interactions_list = []
 for c in u_list2:
     for item in i_list2:
@@ -88,7 +88,7 @@ for c in u_list2:
 
 negative_df = pd.DataFrame(data = interactions_list, columns = ['customer_id','article_id','negative_values'])
 train_with_negative = train_df.merge(negative_df, how = 'outer', on = ['customer_id','article_id']).fillna(0).drop('negative_values',axis=1)
-
+"""
 PATH = 'Models/DeepFM_model.pth'
 model = torch.load(PATH)
 
@@ -136,35 +136,42 @@ for batch, (X,y) in enumerate(train_loader):
     data = data.int()
     X_proc =  data[:,:,:20]
     y_proc = data[:,:,20]
+    score_model = torch.zeros(u_count,i_count)
+    score_bayesian = torch.zeros(u_count, i_count)
     for i in range(negative_samples+1):
         output = model(X_proc[:,i,:])
         outputs[:,i] = output
     for (x, y_it,output) in zip(X_proc,y_proc,outputs.view(batch_size,negative_samples+1,1)):
+        outputs_proc = torch.zeros([i_count])
+        y_proc = torch.zeros([i_count]).int()
         for i_idx in range(negative_samples+1):
             output = output.squeeze()
             u = x[:,0].unique()
             i = x[i_idx,1]
-            y_proc = torch.zeros([i_count]).int()
             y_proc[i.numpy()] = y_it[i_idx]
             neg_idx = ((y_it == 0).nonzero(as_tuple=True)[0])
             pos_idx = ((y_it == 1).nonzero(as_tuple=True)[0])
             negative_items = x[neg_idx][:,1]
             positive_items = x[pos_idx][:,1]
-            outputs_proc = torch.zeros([i_count])
             outputs_proc[i.numpy()] = output[i_idx]
+            rating_vector = np.array(np.mat(U[int(u)]) * np.mat(V.T))[0]
             ################### STARTING NEGATIVE SAMPLING ################### 
             size = 5
             alpha = 5
-            j = BNS(positive_items,negative_items, outputs_proc,prior, size, alpha)
-            r_uij = outputs_proc[i.detach().numpy()] - outputs_proc[j]
+            #j = BNS(positive_items,negative_items, outputs_proc,prior, size, alpha)
+            j = BNS(positive_items,negative_items, rating_vector,prior, size, alpha)
+            #r_uij = outputs_proc[i.detach().numpy()] - outputs_proc[j]
+            r_uij = rating_vector[i.detach().numpy()] - rating_vector[j]
             # update U and V
             loss_func = 1 - torch.sigmoid(r_uij)
             # update U and V
             U[u] += (lr * (loss_func.detach() * (V[i_idx] - V[j]) - reg * U[u])).item()
             V[i] += (lr * (loss_func.detach() * U[u] - reg * V[i])).item()
             V[j] += (lr * (loss_func.detach() * (-U[u]) - reg * V[j])).item()
-
-        score = evaluation.erase(np.array(np.mat(self.U) * np.mat(self.V.T)),train_dict)
+        score_model[u,:] = outputs_proc
+        score_model[u,positive_items] = -100
+    score_bayesian = np.array(np.mat(U) * np.mat(V.T))
+    score_bayesian[X[:,0],X[:,1]] = -100
 
 
 plt.hist(U, bins = 100)

@@ -137,8 +137,8 @@ valid = transactions_df.iloc[splitrange+1:splitrange2]
 test = transactions_df.iloc[splitrange2:]
 
 
-num_days = transactions_df.day.nunique()
-num_months = transactions_df.month.nunique()
+num_days = 31
+num_months = 12
 num_year = transactions_df.year.nunique()
 
 Year_encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_year+1).fit(train[['year']].to_numpy().reshape(-1, 1))
