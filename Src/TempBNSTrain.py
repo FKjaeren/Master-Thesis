@@ -177,3 +177,6 @@ for batch, (X,y) in enumerate(train_loader):
 plt.hist(U, bins = 100)
 plt.hist(V, bins = 100)
 plt.show()
+
+score_bayesian_df = pd.DataFrame(score_bayesian,index=False)
+score_bayesian_df.to_csv('Results/bayesian_Scores.csv', index = False)
