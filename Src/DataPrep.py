@@ -6,14 +6,14 @@ import pickle
 from sklearn import preprocessing
 import copy
 import random
-from Src.CreateNegativeSamples import CreateNegativeSamples
+from CreateNegativeSamples import CreateNegativeSamples
 #import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder
 
 data_path = 'Data/Raw/'
 
-customer_df = pd.read_csv(data_path+'customers.csv')
+customer_df = pd.read_csv(data_path+'customers_subset.csv')
 
 ########### Preprocess customer dataframe
 # check for NaN and map values in some of the columns 
@@ -50,7 +50,7 @@ num_postal = customer_df['postal_code'].nunique()
 postal_code_Encoder = preprocessing.OrdinalEncoder(handle_unknown = 'use_encoded_value', unknown_value=num_postal+1).fit(customer_df[['postal_code']].to_numpy().reshape(-1, 1))
 customer_df['postal_code'] = postal_code_Encoder.transform(customer_df[['postal_code']].to_numpy().reshape(-1, 1))
 
-customer_df.to_csv('Data/Preprocessed/customer_df_numeric.csv',index=False)
+customer_df.to_csv('Data/Preprocessed/customer_df_numeric_subset.csv',index=False)
 
 
 
@@ -60,7 +60,7 @@ customer_df.to_csv('Data/Preprocessed/customer_df_numeric.csv',index=False)
 
 
 ################### Preprocess article dataframe
-articles_df = pd.read_csv(data_path+'articles.csv')
+articles_df = pd.read_csv(data_path+'articles_subset.csv')
 # Drop columns with information we already have from columns alike and drop columns with numbers for groups or colours etc.
 
 # From the articles we see several columns with the same information. section_name, 
@@ -105,10 +105,10 @@ articles_df['index_group_name'] = Index_encoder.transform(articles_df[['index_gr
 
 
 # Save the csv file wihtout the detalied descritption if we need later
-articles_df[['article_id','prod_name','product_type_name','graphical_appearance_name','colour_group_name','department_name','index_group_name']].to_csv('Data/Preprocessed/article_df_numeric.csv',index=False)
+articles_df[['article_id','prod_name','product_type_name','graphical_appearance_name','colour_group_name','department_name','index_group_name']].to_csv('Data/Preprocessed/article_df_numeric_subset.csv',index=False)
 
 ############################# Preprocess transaction train dataframe
-transactions_df_original = pd.read_csv(data_path+'transactions_train.csv')
+transactions_df_original = pd.read_csv(data_path+'transactions_train_subset.csv')
 transactions_df = copy.deepcopy(transactions_df_original)
 
 transactions_df = transactions_df[transactions_df['t_dat']>'2019-09-21']
@@ -179,22 +179,22 @@ number_uniques_dict = {'n_customers' : num_customers+1, 'n_products':num_product
                         'n_months' : num_months +1, 'n_year': num_year+1}
 
 
-with open(r"Data/Preprocessed/number_uniques_dict.pickle", "wb") as output_file:
+with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "wb") as output_file:
     pickle.dump(number_uniques_dict, output_file)
 
 
 # Pickle dump the used encoder for later use
-pickle.dump(Customer_id_Encoder, open('Models/Customer_Id_Encoder.sav', 'wb'))
-pickle.dump(article_id_Encoder, open('Models/Article_Id_Encoder.sav', 'wb'))
-pickle.dump(Price_encoder, open('Models/Price_Encoder.sav', 'wb'))
-pickle.dump(Colour_Encoder, open('Models/Colour_Encoder.sav', 'wb'))
-pickle.dump(Department_encoder, open('Models/Department_Encoder.sav', 'wb'))
-pickle.dump(Prod_name_encoder, open('Models/Prod_Name_Encoder.sav', 'wb'))
-pickle.dump(Index_encoder, open('Models/Index_Encoder.sav', 'wb'))
-pickle.dump(Graphical_encoder, open('Models/Graphical_Encoder.sav', 'wb'))
-pickle.dump(Prod_type_encoder, open('Models/Prod_Type_Encoder.sav', 'wb'))
-pickle.dump(postal_code_Encoder, open('Models/Postal_Code_Encoder.sav', 'wb'))
-pickle.dump(Year_encoder, open('Models/Year_Encoder.sav', 'wb'))
+pickle.dump(Customer_id_Encoder, open('Models/Customer_Id_Encoder_subset.sav', 'wb'))
+pickle.dump(article_id_Encoder, open('Models/Article_Id_Encoder_subset.sav', 'wb'))
+pickle.dump(Price_encoder, open('Models/Price_Encoder_subset.sav', 'wb'))
+pickle.dump(Colour_Encoder, open('Models/Colour_Encoder_subset.sav', 'wb'))
+pickle.dump(Department_encoder, open('Models/Department_Encoder_subset.sav', 'wb'))
+pickle.dump(Prod_name_encoder, open('Models/Prod_Name_Encoder_subset.sav', 'wb'))
+pickle.dump(Index_encoder, open('Models/Index_Encoder_subset.sav', 'wb'))
+pickle.dump(Graphical_encoder, open('Models/Graphical_Encoder_subset.sav', 'wb'))
+pickle.dump(Prod_type_encoder, open('Models/Prod_Type_Encoder_subset.sav', 'wb'))
+pickle.dump(postal_code_Encoder, open('Models/Postal_Code_Encoder_subset.sav', 'wb'))
+pickle.dump(Year_encoder, open('Models/Year_Encoder_subset.sav', 'wb'))
 
 
 def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
@@ -256,10 +256,10 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
             'index_group_name', 'FN', 'Active', 'club_member_status',
             'fashion_news_frequency', 'age', 'postal_code','target']]
 
-        train.to_csv('Data/Preprocessed/train_df.csv', index = False)
-        valid.to_csv('Data/Preprocessed/valid_df.csv', index=False)
-        test.to_csv('Data/Preprocessed/test_df.csv', index = False)
-        test_with_negative.to_csv('Data/Preprocessed/test_with_negative.csv', index = False)
+        train.to_csv('Data/Preprocessed/train_df_subset.csv', index = False)
+        valid.to_csv('Data/Preprocessed/valid_df_subset.csv', index=False)
+        test.to_csv('Data/Preprocessed/test_df_subset.csv', index = False)
+        test_with_negative.to_csv('Data/Preprocessed/test_with_negative_subset.csv', index = False)
         print('Dataframes for a Factorization Machine model have been saved')
 
 
@@ -320,8 +320,8 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
         Product_df_preprocessed = Product_df_preprocessed.merge(Most_frequent_postal_code, how = 'left', on = 'article_id')
 
         # Save the merged dataframe
-        Product_preprocessed_model_df.to_csv('Data/Preprocessed/FinalProductDataFrame.csv', index = False)
-        Product_df_preprocessed.to_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv', index = False)
+        Product_preprocessed_model_df.to_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv', index = False)
+        Product_df_preprocessed.to_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv', index = False)
 
         # We do the same for all customer
         customer_id_aggregated = transactions_df_enriched[['customer_id','price']].groupby('customer_id').mean().reset_index()
@@ -358,7 +358,7 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
         Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_department_name, how = 'left', on = 'customer_id')
         Customer_preprocessed_model_df = Customer_preprocessed_model_df.merge(Most_frequent_index_group_name, how = 'left', on = 'customer_id')
         # Save it
-        Customer_preprocessed_model_df.to_csv('Data/Preprocessed/FinalCustomerDataFrame.csv', index = False)
+        Customer_preprocessed_model_df.to_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv', index = False)
 
         # Save the transactions df aswell
         #transactions_df['price'] = Price_encoder.transform(transactions_df[['price']])
