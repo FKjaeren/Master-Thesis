@@ -98,12 +98,12 @@ loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
 #loss_fn = torch.nn.BCEWithLogitsLoss()
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        #nn.init.xavier_uniform_(m.weight)
-        m.weight.data.fill_(0.0)
+        nn.init.xavier_uniform_(m.weight)
+        #m.weight.data.fill_(0.0)
         m.bias.data.fill_(0.01)
     elif isinstance(m, nn.Embedding):
-        #m.weight.data.normal_(mean=0.0, std=1.0)
-        m.weight.data.fill_(0.0)
+        m.weight.data.normal_(mean=0.0, std=1.0)
+        #m.weight.data.fill_(0.0)
         if m.padding_idx is not None:
             m.weight.data[m.padding_idx].zero_()
 
