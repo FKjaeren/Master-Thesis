@@ -35,6 +35,11 @@ Data/Preprocessed/*
 # Models
 Models/*
 
+# Wandb
+Wandb/*
+Src/Wandb/*
+Src/Outputs/*
+
 # Ignore random filer:
 *.DS_Store
 *.pt.trace.json

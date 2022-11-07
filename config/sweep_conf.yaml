@@ -1,12 +1,9 @@
-program: Src/DeepFMTraining.py
+program: DeepFMTraining.py
 method: grid
 metric:
   name: val_loss
   goal: minimize
 parameters:
-  learning_rate:
-    min: 0.0001
-    max: 0.1
   weight_decay: 
     min: 0.00001
     max: 0.001
@@ -23,8 +20,8 @@ parameters:
     min: 4
     max: 64
   embed_dim: 
-  min: 4
-  max: 64
+    min: 4
+    max: 64
   dropout: 
     min: 0.2
     max: 0.5
