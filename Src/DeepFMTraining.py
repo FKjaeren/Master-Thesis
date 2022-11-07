@@ -14,6 +14,17 @@ import wandb
 import time
 
 
+log = logging.getLogger(__name__)
+@hydra.main(config_path="config", config_name='config.yaml')
+hparams = config.experiment
+device = torch.device("cuda" if hparams['cuda'] else "cpu")
+log.info(f'hparameters:  {hparams}')
+
+
+wandb.init(project="MasterThesis", entity="frederikogjonesmaster")
+
+
+
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
 
@@ -95,15 +106,6 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         item_idx = torch.topk(x,k)
         return item_idx
 
-
-
-log = logging.getLogger(__name__)
-@hydra.main(config_path="config", config_name='config.yaml')
-hparams = config.experiment
-device = torch.device("cuda" if hparams['cuda'] else "cpu")
-log.info(f'hparameters:  {hparams}')
-
-wandb.init(project="MLOps")
 
 
 #embedding_dim = 16
