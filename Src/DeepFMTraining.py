@@ -42,7 +42,7 @@ sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis")
 #config = DictConfig
 #def train_model(config: DictConfig) -> None:
 def main():
-    run = wandb.init()
+    #run = wandb.init()
     #config = OmegaConf.load('../config/config.yaml')
     #print(f"configuration: \n {OmegaConf.to_yaml(config)}")
     #hparams = config.experiment
