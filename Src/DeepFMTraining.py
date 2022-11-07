@@ -101,6 +101,7 @@ log = logging.getLogger(__name__)
 @hydra.main(config_path="config", config_name='config.yaml')
 hparams = config.experiment
 device = torch.device("cuda" if hparams['cuda'] else "cpu")
+log.info(f'hparameters:  {hparams}')
 
 wandb.init(project="MLOps")
 
