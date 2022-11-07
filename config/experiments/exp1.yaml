@@ -3,5 +3,5 @@ lr: 0.002
 mlp_dims: [16,32,16]
 embedding_dim: 16
 dropout: 0.2
-pos_weight: [50,1]
+pos_weight: 50
 
