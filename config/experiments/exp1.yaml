@@ -1,20 +1,7 @@
-loss_weight_1: 0.14
-loss_weight_2: 0.86
-cuda: False
-batch_size: 128
-test_batch_size: 64
-hidden_dim_1: 240
-hidden_dim_2: 254
-hidden_dim_3: 220
-dropout_input: 0.2
-dropout_hidden: 0.5
-lr: 0.003
-epochs: 100
-seed: 0
-train_x_path: '../../../Data/processed/X_train.pkl'
-train_y_path: '../../../Data/processed/y_train.pkl'
-val_x_path: '../../../Data/processed/X_train.pkl'
-val_y_path: '../../../Data/processed/y_train.pkl'
-test_x_path: '../../../Data/processed/X_test.pkl'
-test_y_path: '../../../Data/processed/y_test.pkl'
-model_path: '../../../Models/model.pth'
+weight_decay: 0.00001
+lr: 0.002
+mlp_dims: [16,32,16]
+embedding_dim: 16
+dropout: 0.2
+pos_weight: [50,1]
+
