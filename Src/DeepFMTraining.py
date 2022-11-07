@@ -8,7 +8,7 @@ import pickle
 import copy
 from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
 import hydra
-from omegaconf import DictConfig, OmegaConf
+#from omegaconf import DictConfig, OmegaConf
 import logging
 import wandb
 import time
