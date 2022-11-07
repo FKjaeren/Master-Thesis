@@ -6,24 +6,32 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
 import wandb
 import time
 
+#api = wandb.Api()
 
 log = logging.getLogger(__name__)
-@hydra.main(config_path="config", config_name='config.yaml')
-hparams = config.experiment
-device = torch.device("cuda" if hparams['cuda'] else "cpu")
-log.info(f'hparameters:  {hparams}')
-
-
+#hydra.main(config_path="config", config_name='config.yaml')
+#config = DictConfig
+config = OmegaConf.load('config/config.yaml')
+print(f"configuration: \n {OmegaConf.to_yaml(config)}")
+#hparams = config.experiment
+sweep_configuration = OmegaConf.load('config/sweep_conf.yaml')
 wandb.init(project="MasterThesis", entity="frederikogjonesmaster")
-
-
+sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis")
+count = 10
+wandb.agent(sweep_id, count=count)
+#hparams = sweep_configuration
+hparams = OmegaConf.load('config/experiment/exp1.yaml')
+device = torch.device("cuda" if hparams['cuda'] else "cpu")
+#device = "cpu"
+#wandb.config = hparams
+log.info(f'hparameters:  {hparams}')
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
@@ -76,7 +84,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
     """
 
-    def __init__(self, field_dims, hparams, mlp_dims, n_unique_dict, device, batch_size):
+    def __init__(self, field_dims, hparams, n_unique_dict, device, batch_size):
         super().__init__()
         mlp_dims = [hparams["latent_dim1"], hparams["latent_dim2"], hparams["latent_dim3"]]
         #self.linear = FeaturesLinear(field_dims)

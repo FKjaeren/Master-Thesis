@@ -113,7 +113,7 @@ transactions_df = copy.deepcopy(transactions_df_original)
 
 transactions_df = transactions_df[transactions_df['t_dat']>'2019-09-21']
 
-transactions_df = transactions_df.iloc[-300000:].reset_index().drop(['index'],axis = 1)
+#transactions_df = transactions_df.iloc[-300000:].reset_index().drop(['index'],axis = 1)
 
 ones_data = np.ones(shape=(len(transactions_df),1))
 target = pd.DataFrame(ones_data, columns=['targets'])
@@ -197,7 +197,7 @@ pickle.dump(postal_code_Encoder, open('Models/Postal_Code_Encoder_subset.sav', '
 pickle.dump(Year_encoder, open('Models/Year_Encoder_subset.sav', 'wb'))
 
 
-def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
+def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10,Method = 'FM'):
     print('test')
     if(Method == 'FM'):
         splitrange = round(0.8*len(transactions_df['customer_id']))
@@ -207,7 +207,7 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
         valid = transactions_df.iloc[splitrange+1:splitrange2]
         test = transactions_df.iloc[splitrange2:]
 
-        negative_df = CreateNegativeSamples(train, train, 50, type_df = 'Train', method = 'Random_choices')
+        negative_df = CreateNegativeSamples(train, train, n_negative_samples, type_df = 'Train', method = 'Random_choices')
 
         train = train.merge(negative_df, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
         train = train[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
@@ -216,7 +216,11 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
         train = train.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
         train = train.merge(customer_df, how = 'left', on ='customer_id')
 
+        negative_df_valid = CreateNegativeSamples(valid, train, n_negative_samples, type_df = 'Train', method = 'Random_choices')
+        
+        valid = valid.merge(negative_df_valid, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
         valid = valid[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
+
         valid = valid.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
         valid = valid.merge(customer_df, how = 'left', on ='customer_id')
 
@@ -368,5 +372,5 @@ def GetPreprocessedDF(transactions_df = transactions_df, Method = 'FM'):
 
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'FM'" to get dataframes for a Factorization machine model.
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'MF'" to get dataframes for a Matrix Factorization model.
-
-GetPreprocessedDF(transactions_df,Method = 'FM')
+num_negative_samples = 10
+GetPreprocessedDF(transactions_df,n_negative_samples=num_negative_samples, Method = 'FM')
