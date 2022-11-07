@@ -7,6 +7,12 @@ from torch import nn
 import pickle
 import copy
 from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+import hydra
+from omegaconf import DictConfig, OmegaConf
+import logging
+import wandb
+import time
+
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
@@ -59,13 +65,14 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
     """
 
-    def __init__(self, field_dims, embed_dim, mlp_dims, dropout, n_unique_dict, device, batch_size):
+    def __init__(self, field_dims, hparams, mlp_dims, n_unique_dict, device, batch_size):
         super().__init__()
+        mlp_dims = [hparams["latent_dim1"], hparams["latent_dim2"], hparams["latent_dim3"]]
         #self.linear = FeaturesLinear(field_dims)
         self.fm = FactorizationMachine(reduce_sum=True)
-        self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-        self.embed_output_dim = (len(field_dims)-1) * embed_dim
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout)
+        self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
+        self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
+        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, hparams["dropout"])
 
     def forward(self, x):
         """
@@ -89,12 +96,21 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         return item_idx
 
 
-embedding_dim = 16
-DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,32,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
-optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.002)
+
+log = logging.getLogger(__name__)
+@hydra.main(config_path="config", config_name='config.yaml')
+hparams = config.experiment
+device = torch.device("cuda" if hparams['cuda'] else "cpu")
+
+wandb.init(project="MLOps")
+
+
+#embedding_dim = 16
+DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams = hparams, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
+optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
 #pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
-pos_weight = 100000
-loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
+#pos_weight = 100000
+loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(hparams["pos_weight"]))
 #loss_fn = torch.nn.BCEWithLogitsLoss()
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -109,15 +125,19 @@ def init_weights(m):
 
 
 DeepFMModel.apply(init_weights)
+wandb.watch(DeepFMModel, log_freq=500)
 
-num_epochs = 1
-
+num_epochs = 2
+res = []
 Loss_list = []
 Valid_Loss_list = []
 Best_loss = np.infty
 for epoch in range(1,num_epochs+1):
+    start = time.time()
+
     print(epoch)
     running_loss = 0.
+    running_loss_val = 0.
     epoch_loss = []
     DeepFMModel.train()
 
@@ -139,31 +159,45 @@ for epoch in range(1,num_epochs+1):
         loss.backward()
         # Adjust learning weights
         optimizer.step()
-
+        running_loss += loss 
             # Gather data and report
         epoch_loss.append(loss.item())
-        if(batch % 500 == 0):
-            print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
-
+        #if(batch % 500 == 0):
+        #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
+        wandb.log({"train_loss": loss})
     if(epoch % 1 == 0):
         print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
-        
+        log.info(f"at epoch: {epoch} the Training loss is : {running_loss/len(train_loader)}") 
+
         epoch_loss.append(loss.item())
+
+
     epoch_loss_value = np.mean(epoch_loss)
     Loss_list.append(epoch_loss_value)
     DeepFMModel.eval()
     epoch_valid_loss = []
     for batch, (X_valid,y_valid) in enumerate(valid_loader):
         outputs = DeepFMModel(X_valid)
-        loss = loss_fn(outputs,y_valid.squeeze())
-        epoch_valid_loss.append(loss.item())
+        loss_val = loss_fn(outputs,y_valid.squeeze())
+        epoch_valid_loss.append(loss_val.item())
+        running_loss_val += loss_val 
+
+        wandb.log({"val_loss": loss_val})
+
     if(epoch % 1 == 0):
         print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
+        log.info(f"at epoch: {epoch} the Validation loss is : {running_loss_val/len(valid_loader)}") 
+
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
         best_model = copy.deepcopy(DeepFMModel)
         Best_loss = epoch_valid_loss_value
+
+    end = time.time()
+    res.append(end - start)
+res = np.array(res)
+log.info(f'Timing: {np.mean(res)} +- {np.std(res)}')
 #PATH = 'Models/DeepFM_model.pth'
 #torch.save(best_model, PATH)
 
