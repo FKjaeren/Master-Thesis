@@ -24,7 +24,7 @@ class CreateDataset(Dataset):
         return shape_value
 
 
-train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:600000]
+train_df = pd.read_csv('Data/Preprocessed/train_df.csv')[0:60000]
 valid_df = pd.read_csv('Data/Preprocessed/valid_df.csv')
 test_df = pd.read_csv('Data/Preprocessed/test_df.csv')
 
@@ -92,8 +92,14 @@ class DeepFactorizationMachineModel(torch.nn.Module):
 embedding_dim = 16
 DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, mlp_dims=[16,32,16], dropout=0.2, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
 optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.00001, lr = 0.002)
-pos_weight = 0.95
+pos_weight = [50,1]
 loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
+
+DeepFMModel.apply(init_weights)
 
 num_epochs = 1
 
