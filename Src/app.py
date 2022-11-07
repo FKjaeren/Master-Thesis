@@ -7,7 +7,7 @@ import streamlit as st
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "masterthesis-366109-eeac07888cf3.json" # change for your GCP key
 PROJECT = "MasterThesis" # change for your GCP project
-REGION = "eu-central2" # change for your GCP region (where your model is hosted)
+REGION = "eurupa-west1" # change for your GCP region (where your model is hosted)
 
 st.title("Make a customer recommendation")
 st.header("Type the id of the custommer which recommendations is wanted.")
