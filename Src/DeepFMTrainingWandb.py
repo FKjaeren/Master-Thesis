@@ -33,7 +33,7 @@ sweep_configuration = {
         'pos_weight':{'max': 200, 'min':3}
     }
 }
-count = 1
+#count = 1
 your_api_key = "8c91fb30963b6131314f6ea6e9dd3db60784beb3"
 wandb.login(key=your_api_key)
 sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis", entity="frederikogjonesmaster")
@@ -52,7 +52,9 @@ def main():
     'latent_dim3':wandb.config.latent_dim3,
     'embed_dim':wandb.config.embed_dim,
     'dropout':wandb.config.dropout,
-    'pos_weight':wandb.config.pos_weight}
+    'pos_weight':wandb.config.pos_weight,
+    'fm_weight':wandb.config.fm_weight,
+    'mlp_weight':wandb.config.mlp_weight}
     device = torch.device("cuda" if hparams['cuda'] else "cpu")
     #device = "cpu"
     #wandb.config = hparams
@@ -126,7 +128,7 @@ def main():
             """
             embed_x = self.embedding(x)
 
-            x = self.fm(embed_x)# + self.mlp(embed_x.view(-1, self.embed_output_dim))
+            x = (self.fm(embed_x)*hparams['fm_weight']) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams['mlp_weight'])
  
             return torch.sigmoid(x.squeeze(1))
         def Reccomend_topk(x, k):

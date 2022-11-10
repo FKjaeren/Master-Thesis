@@ -28,3 +28,9 @@ parameters:
   pos_weight: 
     min: 3
     max: 200
+  fm_weight:
+    min: 0.0
+    max: 1.0
+  mlp_weight:
+    min: 0.0
+    max: 1.0
