@@ -79,8 +79,10 @@ def main():
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
     train_subset = train_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
+    train_subset = train_subset.sample(frac=0.33)
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
     valid_subset = valid_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
+    valid_subset = valid_subset.sample(frac=0.33)
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device('cpu')
@@ -131,7 +133,7 @@ def main():
 
             x = (self.fm(embed_x)*hparams['fm_weight']) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams['mlp_weight'])
  
-            return torch.sigmoid(x.squeeze(1))
+            return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
         def Reccomend_topk(x, k):
             item_idx = torch.topk(x,k)
             return item_idx
@@ -181,7 +183,7 @@ def main():
             #
             dataset = X.to(device)
             # Make predictions for this batch
-            outputs = DeepFMModel(dataset)
+            outputs, loss_output = DeepFMModel(dataset)
             #if(torch.isnan(X).sum() > 0):
             #    print("SE her Values with nan in X: ",X[torch.isnan(X)])
             #if(torch.isnan(outputs).sum() > 0):
@@ -189,7 +191,7 @@ def main():
             #    print("And the batch is: ", batch)
             # Compute the loss and its gradients
 
-            loss = loss_fn(outputs,y.squeeze().to(device))
+            loss = loss_fn(loss_output,y.squeeze().to(device))
             loss.backward()
             # Adjust learning weights
             optimizer.step()
@@ -215,8 +217,8 @@ def main():
         DeepFMModel.eval()
         epoch_valid_loss = []
         for batch, (X_valid,y_valid) in enumerate(valid_loader):
-            outputs = DeepFMModel(X_valid)
-            loss_val = loss_fn_val(outputs,y_valid.squeeze())
+            outputs, loss_output = DeepFMModel(X_valid)
+            loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
@@ -252,7 +254,7 @@ def main():
     dataiter = iter(test_loader)
     X, y = next(dataiter)
 
-    output = DeepFMModel(X)
+    output, _ = DeepFMModel(X)
 
     predictions = []
     for i in output:
