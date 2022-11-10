@@ -1,5 +1,5 @@
-program: DeepFMTraining.py
-method: grid
+program: Src/DeepFMTrainingWandb.py
+method: bayes
 metric:
   name: val_loss
   goal: minimize
@@ -8,8 +8,8 @@ parameters:
     min: 0.00001
     max: 0.001
   lr: 
-    min: 0.0001
-    max: 0.05
+    min: 0.00001
+    max: 0.005
   latent_dim1: 
     min: 4
     max: 64
@@ -27,4 +27,4 @@ parameters:
     max: 0.5
   pos_weight: 
     min: 3
-    max: 100
+    max: 200

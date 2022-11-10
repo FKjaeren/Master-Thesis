@@ -1,17 +1,62 @@
 import random
-import torch
 import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+import hydra
+from omegaconf import DictConfig, OmegaConf
 import logging
+import wandb
 import time
+import torch
 
 
+log = logging.getLogger(__name__)
+sweep_configuration = {
+    'method': 'random',
+    #'name': 'sweep',
+    'metric': {
+        'goal': 'minimize', 
+        'name': 'val_loss'
+        },
+    'parameters': {
+        'weight_decay': {'max': 0.001, 'min':0.00001},
+        'lr': {'max': 0.05, 'min': 0.0001},
+        'latent_dim1':{'max': 64, 'min':4},
+        'latent_dim2':{'max': 128, 'min':4},
+        'latent_dim3':{'max': 64, 'min':4},
+        'embed_dim':{'max': 64, 'min':4},
+        'dropout':{'max': 0.5, 'min':0.1},
+        'pos_weight':{'max': 200, 'min':3}
+    }
+}
+count = 1
+your_api_key = "8c91fb30963b6131314f6ea6e9dd3db60784beb3"
+wandb.login(key=your_api_key)
+sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis", entity="frederikogjonesmaster")
+#@hydra.main(config_path="../config", config_name='config.yaml')
+#config = DictConfig
+#def train_model(config: DictConfig) -> None:
 def main():
+
+    wandb.init(project="MasterThesis", entity="frederikogjonesmaster")
+    #hparams = sweep_configuration
+    hparams = {'weight_decay':wandb.config.weight_decay,
+    'lr' : wandb.config.lr,
+    'cuda':False,
+    'latent_dim1':wandb.config.latent_dim1,
+    'latent_dim2':wandb.config.latent_dim2,
+    'latent_dim3':wandb.config.latent_dim3,
+    'embed_dim':wandb.config.embed_dim,
+    'dropout':wandb.config.dropout,
+    'pos_weight':wandb.config.pos_weight}
+    device = torch.device("cuda" if hparams['cuda'] else "cpu")
+    #device = "cpu"
+    #wandb.config = hparams
+    log.info(f'hparameters:  {hparams}')
 
     class CreateDataset(Dataset):
         def __init__(self, dataset):#, features, idx_variable):
@@ -37,7 +82,7 @@ def main():
 
     device = torch.device('cpu')
 
-    train_tensor = torch.tensor(train_subset.fillna(0).to_numpy(), dtype = torch.int)    
+    train_tensor = torch.tensor(train_subset.fillna(0).to_numpy(), dtype = torch.int)
     valid_tensor = torch.tensor(valid_subset.fillna(0).to_numpy(), dtype = torch.int)
     test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
 
@@ -66,45 +111,33 @@ def main():
             H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
         """
 
-        def __init__(self, field_dims, embed_dim, n_unique_dict, device, batch_size, dropout):
+        def __init__(self, field_dims, hparams, n_unique_dict, device, batch_size):
             super().__init__()
-            mlp_dims = [16,32,16]
+            mlp_dims = [hparams["latent_dim1"], hparams["latent_dim2"], hparams["latent_dim3"]]
             #self.linear = FeaturesLinear(field_dims)
             self.fm = FactorizationMachine(reduce_sum=True)
-            self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-            self.embed_output_dim = (len(field_dims)-1) * embed_dim
-            self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=dropout)
+            self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
+            self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
+            self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, hparams["dropout"])
 
         def forward(self, x):
             """
             :param x: Long tensor of size ``(batch_size, num_fields)``
             """
             embed_x = self.embedding(x)
-            #if(torch.isnan(embed_x).sum() > 0):
-            #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
-            #if(torch.isnan(self.fm(embed_x)).sum() > 0):
-            #    print("Values with nan in fm output: ",self.fm(embed_x)[torch.isnan(self.fm(embed_x))])
-            #if(torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim))).sum() > 0):
-            #    print("Values with nan in mlp output: ",self.mlp(embed_x.view(-1, self.embed_output_dim))[torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim)))])
-            #x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
+
             x = self.fm(embed_x)# + self.mlp(embed_x.view(-1, self.embed_output_dim))
-            #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
-            #if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
-            #    print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
+ 
             return torch.sigmoid(x.squeeze(1))
         def Reccomend_topk(x, k):
             item_idx = torch.topk(x,k)
             return item_idx
 
-
-    dropout=0.2
-    embedding_dim = 16
-    device = "cpu"
-    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
-    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.0003, lr = 0.001)
-    pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
+    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams = hparams, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
+    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
+    #pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
     #pos_weight = 100000
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(hparams["pos_weight"]))
     #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
 
@@ -117,10 +150,11 @@ def main():
             m.weight.data.normal_(mean=0.0, std=1.0)
             #m.weight.data.fill_(0.0)
             if m.padding_idx is not None:
-                m.weight.data[m.padding_idx].zero_()        
+                m.weight.data[m.padding_idx].zero_()
 
 
     DeepFMModel.apply(init_weights)
+    wandb.watch(DeepFMModel, log_freq=500)
 
     num_epochs = 1
     res = []
@@ -159,13 +193,16 @@ def main():
             running_loss += loss 
                 # Gather data and report
             epoch_loss.append(loss.item())
+            #if(batch % 500 == 0):
+            #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             Train_acc = (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100
             Train_Acc_list.append(Train_acc)
-            if(batch % 500 == 0):
-                print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
+            wandb.log({"train_acc": Train_acc})
+            wandb.log({"train_loss": loss})
         if(epoch % 1 == 0):
             print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
+            log.info(f"at epoch: {epoch} the Training loss is : {running_loss/len(train_loader)}") 
 
             epoch_loss.append(loss.item())
 
@@ -179,11 +216,15 @@ def main():
             loss_val = loss_fn_val(outputs,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
+            predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
             Val_acc_list.append(Val_acc)
+            wandb.log({"val_acc": Val_acc})
+            wandb.log({"val_loss": loss_val})
 
         if(epoch % 1 == 0):
             print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
+            log.info(f"at epoch: {epoch} the Validation loss is : {running_loss_val/len(valid_loader)}") 
 
         epoch_valid_loss_value = np.mean(epoch_valid_loss)
         Valid_Loss_list.append(epoch_valid_loss_value)
@@ -194,6 +235,7 @@ def main():
         end = time.time()
         res.append(end - start)
     res = np.array(res)
+    log.info(f'Timing: {np.mean(res)} +- {np.std(res)}')
     #PATH = 'Models/DeepFM_model.pth'
     #torch.save(best_model, PATH)
 
@@ -224,5 +266,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-#print("The swwep id is: ", sweep_id)
+
 #wandb.agent(sweep_id, function = main,count = count, entity="frederikogjonesmaster")

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import random
 import pickle
+random.seed(42)
 
 def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train', method = 'Random_choices', customer_id = None, article_df=None, customer_df = None, batch_size = None):
     if(method == 'Random_choices'):
@@ -41,10 +42,10 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
 
             temp = train_df[['article_id','price','sales_channel_id']].groupby(['article_id']).mean().reset_index()
             temp['sales_channel_id'] = temp['sales_channel_id'].round()
-            temp['price'] = temp['price'].round(decimals=4)
+            temp['price'] = temp['price'].round(decimals=0)
 
             negative_df = negative_df.merge(temp, on = 'article_id', how = 'left')
-            print('Negative samples were created for the train dataframe, with the method "Random Choices"')
+            print('Negative samples were created for the train or validation dataframe, with the method "Random Choices"')
         elif(type_df == 'Test'):
             unique_train_customers = df.customer_id.unique()
             article_df = pd.read_csv('Data/Raw/articles.csv')
@@ -77,7 +78,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
 
             temp = train_df[['article_id','price','sales_channel_id']].groupby(['article_id']).mean().reset_index()
             temp['sales_channel_id'] = temp['sales_channel_id'].round()
-            temp['price'] = temp['price'].round(decimals=4)
+            temp['price'] = temp['price'].round(decimals=0)
 
             negative_df = negative_df.merge(temp, on = 'article_id', how = 'left')
             print('Negative samples were created for the test dataframe, with the method "Random Choices"')

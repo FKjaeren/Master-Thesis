@@ -5,7 +5,6 @@ import pickle
 #import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import copy
-import random
 from CreateNegativeSamples import CreateNegativeSamples
 #import seaborn as sns
 
@@ -198,7 +197,6 @@ pickle.dump(Year_encoder, open('Models/Year_Encoder_subset.sav', 'wb'))
 
 
 def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10,Method = 'FM'):
-    print('test')
     if(Method == 'FM'):
         splitrange = round(0.8*len(transactions_df['customer_id']))
         splitrange2 = round(0.975*len(transactions_df['customer_id']))
@@ -225,12 +223,12 @@ def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10
         valid = valid.merge(customer_df, how = 'left', on ='customer_id')
 
 
-        negative_df_test = CreateNegativeSamples(test, train, num_products, type_df='Test', method = 'Random_choices')
+        #negative_df_test = CreateNegativeSamples(test, train, num_products, type_df='Test', method = 'Random_choices')
 
-        test_with_negative = test.merge(negative_df_test, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
-        test_with_negative = test_with_negative[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
-        test_with_negative = test_with_negative.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
-        test_with_negative = test_with_negative.merge(customer_df, how = 'left', on ='customer_id')
+        #test_with_negative = test.merge(negative_df_test, how = 'outer', on = ['customer_id','article_id','price','sales_channel_id','day','month','year','season']).fillna(0).drop('negative_values',axis=1)
+        #test_with_negative = test_with_negative[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
+        #test_with_negative = test_with_negative.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
+        #test_with_negative = test_with_negative.merge(customer_df, how = 'left', on ='customer_id')
 
         test = test[['customer_id','article_id','price','sales_channel_id','day','month','year','season','target']]
         test = test.merge(articles_df, on = 'article_id', how = 'left').drop(['detail_desc'], axis = 1)
@@ -254,16 +252,16 @@ def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10
             'index_group_name', 'FN', 'Active', 'club_member_status',
             'fashion_news_frequency', 'age', 'postal_code','target']]
 
-        test_with_negative = test_with_negative[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
-            'month', 'year', 'season', 'prod_name', 'product_type_name',
-            'graphical_appearance_name', 'colour_group_name', 'department_name',
-            'index_group_name', 'FN', 'Active', 'club_member_status',
-            'fashion_news_frequency', 'age', 'postal_code','target']]
+        #test_with_negative = test_with_negative[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
+            #'month', 'year', 'season', 'prod_name', 'product_type_name',
+            #'graphical_appearance_name', 'colour_group_name', 'department_name',
+            #'index_group_name', 'FN', 'Active', 'club_member_status',
+            #'fashion_news_frequency', 'age', 'postal_code','target']]
 
         train.to_csv('Data/Preprocessed/train_df_subset.csv', index = False)
         valid.to_csv('Data/Preprocessed/valid_df_subset.csv', index=False)
         test.to_csv('Data/Preprocessed/test_df_subset.csv', index = False)
-        test_with_negative.to_csv('Data/Preprocessed/test_with_negative_subset.csv', index = False)
+        #test_with_negative.to_csv('Data/Preprocessed/test_with_negative_subset.csv', index = False)
         print('Dataframes for a Factorization Machine model have been saved')
 
 
