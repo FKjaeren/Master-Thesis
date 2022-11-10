@@ -91,7 +91,7 @@ def main():
             #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
             #if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
             #    print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
-            return torch.sigmoid(x.squeeze(1))
+            return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
         def Reccomend_topk(x, k):
             item_idx = torch.topk(x,k)
             return item_idx
@@ -144,7 +144,7 @@ def main():
             #
             dataset = X.to(device)
             # Make predictions for this batch
-            outputs = DeepFMModel(dataset)
+            outputs, loss_output = DeepFMModel(dataset)
             #if(torch.isnan(X).sum() > 0):
             #    print("SE her Values with nan in X: ",X[torch.isnan(X)])
             #if(torch.isnan(outputs).sum() > 0):
@@ -152,7 +152,7 @@ def main():
             #    print("And the batch is: ", batch)
             # Compute the loss and its gradients
 
-            loss = loss_fn(outputs,y.squeeze().to(device))
+            loss = loss_fn(loss_output,y.squeeze().to(device))
             loss.backward()
             # Adjust learning weights
             optimizer.step()
@@ -175,8 +175,8 @@ def main():
         DeepFMModel.eval()
         epoch_valid_loss = []
         for batch, (X_valid,y_valid) in enumerate(valid_loader):
-            outputs = DeepFMModel(X_valid)
-            loss_val = loss_fn_val(outputs,y_valid.squeeze())
+            outputs, loss_output = DeepFMModel(X_valid)
+            loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
             Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
