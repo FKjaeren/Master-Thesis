@@ -30,13 +30,13 @@ sweep_configuration = {
         'latent_dim3':{'max': 64, 'min':4},
         'embed_dim':{'max': 64, 'min':4},
         'dropout':{'max': 0.5, 'min':0.1},
-        'pos_weight':{'max': 200, 'min':3}
+        #'pos_weight':{'max': 200, 'min':3}
     }
 }
 #count = 1
 your_api_key = "8c91fb30963b6131314f6ea6e9dd3db60784beb3"
 wandb.login(key=your_api_key)
-sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis", entity="frederikogjonesmaster")
+#sweep_id = wandb.sweep(sweep=sweep_configuration, project="MasterThesis", entity="frederikogjonesmaster")
 #@hydra.main(config_path="../config", config_name='config.yaml')
 #config = DictConfig
 #def train_model(config: DictConfig) -> None:
@@ -137,10 +137,10 @@ def main():
 
     DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams = hparams, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
-    #pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
+    pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
     #pos_weight = 100000
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(hparams["pos_weight"]))
-    #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
+    #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(hparams["pos_weight"]))
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
 
     def init_weights(m):
