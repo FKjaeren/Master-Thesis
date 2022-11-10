@@ -52,9 +52,10 @@ def main():
     'latent_dim3':wandb.config.latent_dim3,
     'embed_dim':wandb.config.embed_dim,
     'dropout':wandb.config.dropout,
-    'pos_weight':wandb.config.pos_weight,
+    #'pos_weight':wandb.config.pos_weight,
     'fm_weight':wandb.config.fm_weight,
-    'mlp_weight':wandb.config.mlp_weight}
+    'mlp_weight':wandb.config.mlp_weight,
+    'batch_size':wandb.config.batch_size}
     device = torch.device("cuda" if hparams['cuda'] else "cpu")
     #device = "cpu"
     #wandb.config = hparams
