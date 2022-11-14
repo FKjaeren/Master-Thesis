@@ -87,7 +87,7 @@ def get_dataset(df, articles, number_negative_articles):
 
 ### Train model
 
-model = SimpleRecommender(customers_sub, articles_sub, 34)
+model = SimpleRecommender(customers_sub, articles_sub, 32)
 model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
             optimizer=tf.keras.optimizers.SGD(learning_rate = 100.), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])

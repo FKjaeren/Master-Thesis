@@ -35,7 +35,7 @@ def main():
     valid_subset = valid_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
-    device = torch.device('cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_tensor = torch.tensor(train_subset.fillna(0).to_numpy(), dtype = torch.int)    
     valid_tensor = torch.tensor(valid_subset.fillna(0).to_numpy(), dtype = torch.int)
@@ -45,7 +45,7 @@ def main():
     valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
-    batch_size = 32
+    batch_size = 128
 
     #dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
 
@@ -87,7 +87,7 @@ def main():
             #if(torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim))).sum() > 0):
             #    print("Values with nan in mlp output: ",self.mlp(embed_x.view(-1, self.embed_output_dim))[torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim)))])
             #x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-            x = self.fm(embed_x)# + self.mlp(embed_x.view(-1, self.embed_output_dim))
+            x = (self.fm(embed_x)*1.2737) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*1.341)
             #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
             #if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
             #    print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
@@ -97,11 +97,10 @@ def main():
             return item_idx
 
 
-    dropout=0.2
-    embedding_dim = 16
-    device = "cpu"
+    dropout=0.2677
+    embedding_dim = 26
     DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
-    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.0003, lr = 0.001)
+    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.005324, lr = 0.003665)
     pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
     #pos_weight = 100000
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
@@ -194,8 +193,8 @@ def main():
         end = time.time()
         res.append(end - start)
     res = np.array(res)
-    #PATH = 'Models/DeepFM_model.pth'
-    #torch.save(best_model, PATH)
+    PATH = 'Models/DeepFM_model.pth'
+    torch.save(best_model, PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)

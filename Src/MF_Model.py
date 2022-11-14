@@ -250,9 +250,9 @@ product_dataset, product_train_loader, customer_train_loader, product_valid_load
                                                             'product_type_name', 'graphical_appearance_name', 'colour_group_name',
                                                             'department_name', 'index_group_name'], batch_size=batch_size, Subset= True)
 
-embedding_dim = 16
+embedding_dim = 34
 model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict, device=device, n_ages = 111)
-optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.00001, lr = 0.005)
+optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.005, lr = 0.003)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 10
