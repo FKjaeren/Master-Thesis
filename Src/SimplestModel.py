@@ -9,56 +9,17 @@ customer_df = pd.read_csv(data_path+'customers.csv')
 #transactions_df = pd.read_csv(data_path+'transactions_train.csv')
 transactions_df = pd.read_csv('Data/Preprocessed/transactions_df_subset.csv')
 
-# Preprocess customer dataframe
-# check for NaN and make a subset with relevant columns
-percent_c = (customer_df.isnull().sum()/customer_df.isnull().count()*100).sort_values(ascending = False)
-df_c = customer_df[['customer_id','age', 'club_member_status']]
-df_c.dropna(subset=['age'])
-
-
-# Preprocess article dataframe
-# subset relevant columns
-df_a = articles_df[['article_id','product_type_no', 'prod_name', 'product_type_name', 'product_group_name', 'colour_group_name', 'department_name', 'section_name']]
-# check for NaN
-percent_a = (df_a.isnull().sum()/df_a.isnull().count()*100).sort_values(ascending = False)
-
-# Preprocess transaction train dataframe
-#datetime and create a month column
-transactions_df.t_dat = pd.to_datetime(transactions_df.t_dat)
-transactions_df['month'] =  pd.DatetimeIndex(transactions_df['t_dat']).month
-transactions_df['year'] =  pd.DatetimeIndex(transactions_df['t_dat']).year
-transactions_df['day'] =  pd.DatetimeIndex(transactions_df['t_dat']).day
-
-
-
-transactions_df.loc[(transactions_df['month']>= 1) & (transactions_df['month'] <=2), 'season'] = 'Winter'
-transactions_df.loc[(transactions_df['month'] == 12), 'season'] = 'Winter' 
-transactions_df.loc[(transactions_df['month'] >= 3) & (transactions_df['month'] <=5), 'season'] = 'Spring' 
-transactions_df.loc[(transactions_df['month'] >= 6) & (transactions_df['month'] <=8),'season'] = 'Summer' 
-transactions_df.loc[(transactions_df['month'] >= 9) & (transactions_df['month'] <=11), 'season'] = 'Autumn' 
-
-
-X = transactions_df.iloc[0:20000].merge(df_a, how = "left", on = "article_id")
-
-X = pd.get_dummies(X, columns = ['season','product_type_name','product_group_name','section_name'])
-
-X = X.merge(df_c[['customer_id','age']], how = 'left', on = 'customer_id')
 
 splitrange = round(0.75*len(transactions_df['customer_id']))
 splitrange2 = round(0.95*len(transactions_df['customer_id']))
 
-train = X.iloc[:splitrange]
-valid = X.iloc[splitrange+1:splitrange2]
-test = X.iloc[splitrange2:]
+train = transactions_df.iloc[:splitrange]
+valid = transactions_df.iloc[splitrange+1:splitrange2]
+test = transactions_df.iloc[splitrange2:]
 
 #df_a_sub = df_a.drop([])
 articles_sub = articles_df[['article_id']].values.flatten()
 customers_sub = customer_df[['customer_id']].values.flatten()
-
-feature_data = train.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
-val_features_data = valid.drop(['t_dat','prod_name','department_name','colour_group_name'],axis=1)
-articles_data = articles_df[['article_id']].merge(feature_data.drop(['customer_id'],axis=1), on = 'article_id', how = 'left')
-customers_data = customer_df[['customer_id']].merge(train.drop(['t_dat','prod_name','department_name','colour_group_name','article_id'],axis=1), on = 'customer_id', how = 'left')
 
 ### Create data with all features:
 
@@ -81,19 +42,12 @@ class SimpleRecommender(tf.keras.Model):
         self.dot = tf.keras.layers.Dot(axes=-1)
 
     def call(self, inputs):
-        print('hej')
-        for users, features, y in input:
-            print('users = ', users)
-            print('features = ', features)
-
-            user = inputs[0]
-            print(users)
-            article = inputs[1]
-            customer_embedding_index = self.customer_table(users['customer_id'].astype(str))
-            article_embedding_index = self.article_table(features['article_id'])
-            customer_data = users
-            customer_data['customer_id'] = customer_embedding_index.numpy()
-            article_data = article
+        user = inputs[0]
+        article = inputs[1]
+        customer_embedding_index = self.customer_table(users['customer_id'].astype(str))
+        article_embedding_index = self.article_table(features['article_id'])
+        customer_data['customer_id'] = customer_embedding_index.numpy()
+        article_data = article
             article_data['article_id'] = article_embedding_index.numpy()
         #customer_embbeding_values = self.customer_embed(customer_embedding_index)
         #article_embedding_values = self.articles_embed(article_embedding_index)
@@ -148,17 +102,17 @@ for (customer, candidate), y in get_dataset(train,articles_sub,4):
     print(y)
     break
 
-model = SimpleRecommender(customers_data, articles_data, 64)
+model = SimpleRecommender(customer_df, articles_df, 64)
 model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
             optimizer=tf.keras.optimizers.SGD(learning_rate = 100.), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
 model.fit(get_dataset(train, articles_sub, 100), validation_data = get_dataset(valid, articles_sub,100), epochs =5)
-model.fit(feature_data, validation_data = val_features_data, epochs =5)
+model.fit(train, validation_data = valid, epochs =5)
 
 test_customer = '6f494dbbc7c70c04997b14d3057edd33a3fc8c0299362967910e80b01254c656'
 test_article = 806388002
 
 print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
 
-print("Recs for item {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))
+print("Recs for customer {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))

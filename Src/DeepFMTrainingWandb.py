@@ -79,10 +79,10 @@ def main():
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
     train_subset = train_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
-    train_subset = train_subset.sample(frac=0.33)
+    train_subset = train_subset.sample(frac=0.2)
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
     valid_subset = valid_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
-    valid_subset = valid_subset.sample(frac=0.33)
+    valid_subset = valid_subset.sample(frac=0.2)
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device('cpu')
@@ -250,25 +250,6 @@ def main():
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
     ##test:
     # 1 iteration:
-
-    dataiter = iter(test_loader)
-    X, y = next(dataiter)
-
-    output, _ = DeepFMModel(X)
-
-    predictions = []
-    for i in output:
-        if i < 0.5:
-            predictions.append(0)
-        else:
-            predictions.append(1)
- 
-    print("The output of the model is: ", predictions)
-
-    print("The true labels are: ", y)
-
-    print("The accuracy of the model on 1 iterations is:", (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100,"%")
-
 if __name__ == '__main__':
     main()
 
