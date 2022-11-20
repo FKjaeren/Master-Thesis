@@ -48,7 +48,7 @@ class SimpleRecommender(tf.keras.Model):
         article_embedding_index = self.article_table(features['article_id'])
         customer_data['customer_id'] = customer_embedding_index.numpy()
         article_data = article
-            article_data['article_id'] = article_embedding_index.numpy()
+        article_data['article_id'] = article_embedding_index.numpy()
         #customer_embbeding_values = self.customer_embed(customer_embedding_index)
         #article_embedding_values = self.articles_embed(article_embedding_index)
 

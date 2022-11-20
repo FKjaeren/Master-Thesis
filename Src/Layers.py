@@ -54,7 +54,7 @@ class FeaturesEmbedding(torch.nn.Module):
         #customer_embedding_final[:,17,:] = self.colour_embedding(x[:,17])
         #customer_embedding_final[:,18,:] = self.department_embedding(x[:,18])
         #customer_embedding_final[:,19,:] = self.index_group_name_embedding(x[:,19])
-        customer_embedding_final = torch.zeros((self.batch_size, self.num_fields, self.embedding_dim))
+        customer_embedding_final = torch.zeros((x.shape[0], self.num_fields, self.embedding_dim))
         customer_embedding_final[:,0,:] = self.customer_embedding(x[:,0])
         customer_embedding_final[:,1,:] = self.product_embedding(x[:,1])
         customer_embedding_final[:,2,:] = self.price_embedding(x[:,2])

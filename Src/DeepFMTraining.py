@@ -30,9 +30,9 @@ def main():
 
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
-    train_subset = train_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
+    train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
-    valid_subset = valid_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
+    valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -121,7 +121,7 @@ def main():
 
     DeepFMModel.apply(init_weights)
 
-    num_epochs = 1
+    num_epochs = 10
     res = []
     Loss_list = []
     Valid_Loss_list = []

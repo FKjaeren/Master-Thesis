@@ -48,10 +48,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
             print('Negative samples were created for the train or validation dataframe, with the method "Random Choices"')
         elif(type_df == 'Test'):
             unique_train_customers = df.customer_id.unique()
-            article_df = pd.read_csv('Data/Raw/articles.csv')
-            with open('Models/Article_Id_Encoder.sav', "rb") as input_file: 
-                Article_id_encoder = pickle.load(input_file)
-            article_df['article_id'] = Article_id_encoder.transform(article_df['article_id'].to_numpy().reshape(-1, 1))
+            article_df = pd.read_csv('Data/Preprocessed/article_df_numeric_subset.csv')
             unique_train_articles = article_df.article_id.unique()
             map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 

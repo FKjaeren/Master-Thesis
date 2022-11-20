@@ -73,7 +73,7 @@ class Mapper():
         random_negatives_indexes  = tf.random.uniform((self.num_negative_articles,),minval = 0, maxval = self.num_possible_articles , dtype = tf.int32) 
         negative_products =  tf.gather(self.possible_articles_tensor, random_negatives_indexes)
         candidates = tf.concat([article, negative_products], axis = 0)
-        return (customer, candidates), self.y
+        return (customer, candidates), self.yxw
 
 
 def get_dataset(df, articles, number_negative_articles):

@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-import SessionState
+#import SessionState
 import streamlit as st
 
 
@@ -68,29 +68,38 @@ else:
 # Display info about model and classes
 if st.checkbox("Show models"):
     st.write(f"You chose {MODEL}")
+#pred_button = st.button(label = "Recommend", key = "my_button_label")
+#session_state = st.session_state.my_button_label = False
 
-session_state = SessionState.get(pred_button=False)
+number_input = st.number_input(
+    "Enter a customer id 👇",
+    label_visibility=st.session_state.visibility,
+    disabled=st.session_state.disabled,
+    placeholder=st.session_state.placeholder,
+    )
+
+if number_input:
+    st.write("You entered: ", number_input)
+
 
 # Create logic for app flow
-"""
-if not uploaded_file:
-    st.warning("Please upload a customer ID.")
+if not number_input:
+    st.warning("Please upload a customer id.")
     st.stop()
 else:
-    session_state.uploaded_image = uploaded_file.read()
-    st.image(session_state.uploaded_image, use_column_width=True)
-    
-"""
-pred_button = st.button("Recommend")
+    number_input.text_input = number_input.read()
+    st.number_input(number_input.text_input, use_column_width=True)
+    pred_button = st.button("Recommend")
+
 # Did the user press the predict button?
 if pred_button:
-    session_state.pred_button = True 
+    st.session_state.pred_button = True 
 
 # And if they did...
-if session_state.pred_button:
-    session_state.image, session_state.pred_class, session_state.pred_conf = make_prediction(session_state.uploaded_image, model=MODEL)
-    st.write(f"Prediction: {session_state.pred_class}, \
-               Confidence: {session_state.pred_conf:.3f}")
+if st.session_state.pred_button:
+    st.session_state.image, st.session_state.pred_class, st.session_state.pred_conf = make_prediction(st.session_state.number_input, model=MODEL)
+    st.write(f"Prediction: {st.session_state.pred_class}, \
+               Confidence: {st.session_state.pred_conf:.3f}")
     """
     # Create feedback mechanism (building a data flywheel)
     session_state.feedback = st.selectbox(
