@@ -241,7 +241,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
 
     return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes, product_test_loader, customer_test_loader
 
-batch_size = 256
+batch_size = 128
 
 product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes,_ ,_ = ReadData(
                                                             product='article_id', customer='customer_id',features= ['FN', 'Active', 'club_member_status',
