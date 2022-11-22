@@ -241,7 +241,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
 
     return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes, product_test_loader, customer_test_loader
 
-batch_size = 256
+batch_size = 128
 
 product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes,_ ,_ = ReadData(
                                                             product='article_id', customer='customer_id',features= ['FN', 'Active', 'club_member_status',
@@ -319,7 +319,7 @@ for epoch in range(1,num_epochs+1):
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
-        best_model = model
+        best_model = copy.deepcopy(model)
         Best_loss = epoch_valid_loss_value
 #torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 PATH = 'Models/Baseline_MulitDim_model.pth'
