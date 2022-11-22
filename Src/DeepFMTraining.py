@@ -79,7 +79,7 @@ def main():
             """
             :param x: Long tensor of size ``(batch_size, num_fields)``
             """
-            embed_x = self.embedding(x)
+            embed_x= self.embedding(x)
             #if(torch.isnan(embed_x).sum() > 0):
             #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
             #if(torch.isnan(self.fm(embed_x)).sum() > 0):

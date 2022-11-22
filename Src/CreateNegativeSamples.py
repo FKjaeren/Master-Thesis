@@ -87,10 +87,9 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         #unique_train_customers = df.customer_id.unique()  
         interactions_list = []
         unique_train_articles = article_df.article_id.unique()
-        for c in customer_id:
-            for i in range(num_negative_samples):
-                item = random.choice(unique_train_articles)
-                interactions_list.append([c.item(),item,0])
+        for i in range(num_negative_samples):
+            item = random.choice(unique_train_articles)
+            interactions_list.append([customer_id,item,0])
         map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
         negative_df = pd.DataFrame(data = interactions_list, columns = ['customer_id','article_id','negative_values'])
         negative_df['day'] = np.random.randint(1, 28, negative_df.shape[0])
