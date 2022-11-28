@@ -6,7 +6,23 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
+import os
 from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+
+class DatasetIter(Dataset):
+    def __init__(self, csv_path, chunkSize):
+        self.chunksize = chunkSize
+        self.reader = pd.read_csv(csv_path, sep=',', chunksize=self.chunksize, header=None, iterator=True)
+
+    def __len__(self):
+        return self.chunksize
+
+    def __getitem__(self, index):
+        data = self.reader.get_chunk(self.chunksize)
+        tensorData = torch.tensor(data.values, dtype=torch.int)
+        inputs = tensorData[:,:-1]
+        labels = tensorData[:,-1]
+        return inputs, labels
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
@@ -32,7 +48,8 @@ class DeepFactorizationMachineModel(torch.nn.Module):
 
     def __init__(self, field_dims, embed_dim, n_unique_dict, device, batch_size, dropout):
         super().__init__()
-        mlp_dims = [22,107,47]
+        #mlp_dims = [22,107,47]
+        mlp_dims = [16,32,16]
         #self.linear = FeaturesLinear(field_dims)
         self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
@@ -43,6 +60,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
+        print(x)
         embed_x = self.embedding(x)
             #if(torch.isnan(embed_x).sum() > 0):
             #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import random
 import pickle
+import math
 random.seed(42)
 
 def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train', method = 'Random_choices', customer_id = None, article_df=None, customer_df = None, batch_size = None):
@@ -105,7 +106,8 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         negative_df.loc[(negative_df['month'] >= 9) & (negative_df['month'] <=11), 'season'] = 'Autumn' 
         negative_df['season'] = negative_df['season'].map(map_season)
 
-        temp = pd.DataFrame(data = train_df[:,1:4].view(batch_size,3).numpy(), columns = ['article_id','price', 'sales_channel_id'])
+        #temp = pd.DataFrame(data = train_df[:,1:4].view(batch_size,3).numpy(), columns = ['article_id','price', 'sales_channel_id'])
+        temp = train_df[["article_id","price","sales_channel_id"]]
         temp = temp.groupby(['article_id']).mean().reset_index()
         temp['sales_channel_id'] = temp['sales_channel_id'].round()
         temp['price'] = temp['price'].round(decimals=4)
@@ -119,8 +121,16 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
             'index_group_name', 'FN', 'Active', 'club_member_status',
             'fashion_news_frequency', 'age', 'postal_code','negative_values']]
         negative_df = torch.tensor(negative_df.fillna(0).to_numpy(), dtype = torch.int)
-        negative_df = negative_df.view(batch_size,num_negative_samples,21)
+        negative_df_temp = negative_df[0:(math.floor(num_negative_samples/batch_size)*21)]
+        #remaining = negative_df[(math.floor(num_negative_samples/batch_size)*21)+1:]
+        
+        #remaining_batch = remaining.view(int((num_negative_samples-(math.floor(num_negative_samples/batch_size)*21))/21),21)
+        #remaining_batch = torch.unsqueeze(remaining_batch, 1)
+        
+        #negative_df_final = torch.cat((negative_df_temp,remaining_batch), dim = 1)
+
+        #negative_df = negative_df.view(batch_size,math.floor(num_negative_samples/batch_size),21)
         #print('Negative samples were created for the train dataframe, with the method "Random Choices"')
     else:
         print('Unreconized method')
-    return negative_df
+    return negative_df_temp

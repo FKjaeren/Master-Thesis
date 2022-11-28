@@ -48,8 +48,15 @@ with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input
     number_uniques_dict = pickle.load(input_file)
 
 model = DeepFactorizationMachineModel(field_dims = data.columns, embed_dim=26, n_unique_dict = number_uniques_dict, device = 'cpu', batch_size=1,dropout=0.2677)
-model.load_state_dict(torch.load('../Models/DeepFM_model_Final.pth'))
-outputs = model(data)
-idx, conf = Get_Recommendations(customer_input, model=model, test_set=data, test_full_set = full_data, batch_size = 1, num_recommendations = Amount_input)
+model.load_state_dict(torch.load('Models/DeepFM_model_Final.pth'))
+outputs,_ = model(full_data)
+outputs = outputs.detach()
+conf, idx = torch.topk(outputs, Amount_input)
+#idx, conf = Get_Recommendations(customer_input, model=model, test_set=data, test_full_set = full_data, test_full_data_path=None, chunksize=None, batch_size = 1, num_recommendations = Amount_input, iter_data = False)
 
-data_load_state.text('The '+str(Amount_input)+'recommendations is: '+str(idx))
+
+#data_load_state.text(('The '+str(Amount_input)+' recommendations is product: '+str(idx.numpy()),'with confidence', str(conf.numpy()), '%'))
+#data_load_state.text()
+
+st.text(f'The {str(Amount_input)} recommendations is product: {str(idx.numpy())}')
+st.text(f'with confidence {str(conf.numpy())} %')
