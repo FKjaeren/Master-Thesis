@@ -25,9 +25,9 @@ class DatasetIter(Dataset):
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
-
-        self.dataset = dataset[:,0:-1]
-        self.targets = dataset[:,-1:].float()
+        #tensorData = torch.tensor(Dataset.values, dtype=torch.int)
+        self.dataset = dataset[:,:-1]
+        self.targets = dataset[:,-1:]#.float()
 
     def __len__(self):
         return len(self.dataset)
@@ -58,7 +58,6 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
-        print(x)
         embed_x = self.embedding(x)
             #if(torch.isnan(embed_x).sum() > 0):
             #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
