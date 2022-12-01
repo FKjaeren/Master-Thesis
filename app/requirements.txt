@@ -7,3 +7,4 @@ torchvision==0.14.0
 protobuf==3.14.0
 google-cloud-storage==2.6.0
 gcsfs==2022.11.0
+scikit-learn==1.0.2
