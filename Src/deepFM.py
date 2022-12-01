@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
@@ -32,7 +32,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
 
     def __init__(self, field_dims, embed_dim, n_unique_dict, device, batch_size, dropout):
         super().__init__()
-        mlp_dims = [22,107,47]
+        mlp_dims = [16,32,16]
         #self.linear = FeaturesLinear(field_dims)
         self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
