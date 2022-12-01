@@ -70,7 +70,7 @@ def load_data(storage_client):
     return customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, state_dict
 
 
-@st.cache
+#@st.cache
 def make_prediction(dcustomer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, state_dict):
 
     model = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=26, n_unique_dict = number_uniques_dict, device = 'cpu', batch_size=1,dropout=0.2677)
@@ -80,8 +80,8 @@ def make_prediction(dcustomer_data, article_data, train_df, article_data_raw, nu
     batch_size = 128
     _, full_data = load_recommendation_data(customer_input, None, customer_data, article_data, batch_size=batch_size, train_df=train_df)
 
-
-    outputs,_ = model(full_data)
+    data_without_target = full_data[:,:20]
+    outputs,_ = model(data_without_target)
     outputs = outputs.detach()
     conf, idx = torch.topk(outputs, Amount_input)
 

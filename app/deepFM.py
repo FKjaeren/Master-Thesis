@@ -62,6 +62,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         embed_x = self.embedding(x)
         x = (self.fm(embed_x)*1.2737) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*1.341)
+        return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
         item_idx = torch.topk(x,k)
         return item_idx
