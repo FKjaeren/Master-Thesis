@@ -1,7 +1,7 @@
 FROM python:3.9
 
 # Expose port you want your app on
-EXPOSE 8585
+EXPOSE 8501
 # Upgrade pip 
 RUN pip install -U pip
 
@@ -13,4 +13,4 @@ WORKDIR /app
 COPY . /app
 
 # Run
-ENTRYPOINT ["streamlit", "run", "app.py","--server.port=8585", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "app.py","--server.port=8501"]
