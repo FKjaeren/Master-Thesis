@@ -132,6 +132,9 @@ odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, n
 
 #odd_input = torchdrift.data.functional.gaussian_noise(inputs, severity= ) 
 
+inputs, _ = next(iter(datamodule.default_dataloader(shuffle=True)))
+inputs_ood = corruption_function(inputs)
+
 
 feature_extractor = copy.deepcopy(model)
 
@@ -146,27 +149,19 @@ class model(nn.Module):
 newmodel = model(feature_extractor.embedding)
 
 
-#torchdrift.utils.fit(datamodule.val_dataloader(), newmodel, detector)
-drift_detector = torchdrift.detectors.KernelMMDDriftDetector()
+torchdrift.utils.fit(datamodule.val_dataloader(), newmodel, detector)
 
 
-od_model = drift_detector
-ind_datamodule = datamodule
-ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_transform=corruption_function)
-
-ood_ratio = 0.8
-sample_size = 10
-experiment = torchdrift.utils.DriftDetectionExperiment(od_model, newmodel, ood_ratio=ood_ratio, sample_size=sample_size)
-experiment.post_training(datamodule.val_dataloader())
-auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
+drift_detection_model = torch.nn.Sequential(
+    newmodel,
+    detector
+)
 
 
-
-
-
-
-
-
+features = newmodel(inputs_ood)
+score = detector(features)
+p_val = detector.compute_p_value(features)
+score, p_val
 
 #x, y = next(iter(datamodule.val_dataloader()))
 ood_ratio = 0.8
