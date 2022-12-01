@@ -60,20 +60,8 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
-        print(x)
         embed_x = self.embedding(x)
-            #if(torch.isnan(embed_x).sum() > 0):
-            #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
-            #if(torch.isnan(self.fm(embed_x)).sum() > 0):
-            #    print("Values with nan in fm output: ",self.fm(embed_x)[torch.isnan(self.fm(embed_x))])
-            #if(torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim))).sum() > 0):
-            #    print("Values with nan in mlp output: ",self.mlp(embed_x.view(-1, self.embed_output_dim))[torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim)))])
-            #x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
         x = (self.fm(embed_x)*1.2737) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*1.341)
-            #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
-            #if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
-            #    print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
-        return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
         item_idx = torch.topk(x,k)
         return item_idx
