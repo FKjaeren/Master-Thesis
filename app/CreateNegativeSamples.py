@@ -4,6 +4,7 @@ import numpy as np
 import random
 import pickle
 import math
+from datetime import date
 random.seed(42)
 
 def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train', method = 'Random_choices', customer_id = None, article_df=None, customer_df = None, batch_size = None):
@@ -85,18 +86,18 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
     elif(method == 'Bayesian_sampling'):
         print('TODO du får nada')
     elif(method == 'OneCustomerNegSamples'):
+        today = date.today()
         #unique_train_customers = df.customer_id.unique()  
         interactions_list = []
         unique_train_articles = article_df.article_id.unique()
-        for i in range(num_negative_samples):
-            item = random.choice(unique_train_articles)
-            interactions_list.append([customer_id,item,0])
+        for i in unique_train_articles:
+            interactions_list.append([customer_id,i,0])
         map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
         negative_df = pd.DataFrame(data = interactions_list, columns = ['customer_id','article_id','negative_values'])
-        negative_df['day'] = np.random.randint(1, 28, negative_df.shape[0])
-        negative_df['month'] = np.random.randint(1, 12, negative_df.shape[0])
-        #negative_df['year'] = np.random.randint(0, transactions_df.year.unique().max(), negative_df.shape[0])
-        negative_df['year'] = np.zeros(negative_df.shape[0])
+        ### Get todays date
+        negative_df['day'] = today.day
+        negative_df['month'] = today.month
+        negative_df['year'] = today.year
 
         negative_df.loc[(negative_df['month']>= 1) & (negative_df['month'] <=2), 'season'] = 'Winter'
 
@@ -133,4 +134,4 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         #print('Negative samples were created for the train dataframe, with the method "Random Choices"')
     else:
         print('Unreconized method')
-    return negative_df_temp
+    return negative_df

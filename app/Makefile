@@ -1,9 +1,9 @@
 .PHONY: run run-container gcloud-deploy
 
-APP_NAME ?= App
+APP_NAME ?= app
 
 run:
-	@streamlit run App.py --server.port=8080 --server.address=0.0.0.0
+	@streamlit run app.py --server.port=8080 --server.address=0.0.0.0
 
 run-container:
 	@docker build . -t ${APP_NAME}
