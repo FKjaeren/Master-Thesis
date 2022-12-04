@@ -4,11 +4,10 @@ from torch import nn
 import torch
 
 class FeaturesEmbedding(torch.nn.Module):
-    def __init__(self, embedding_dim, num_fields, batch_size, n_unique_dict,device,n_ages=111):
+    def __init__(self, embedding_dim, num_fields, n_unique_dict,device,n_ages=111):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
-        self.batch_size = batch_size
         self.n_unique_dict = n_unique_dict
         self.n_ages = n_ages
         self.num_fields = len(num_fields)-1
@@ -103,3 +102,10 @@ class FactorizationMachine(torch.nn.Module):
         if self.reduce_sum:
             ix = torch.sum(ix, dim=1, keepdim=True)
         return 0.5 * ix
+
+class LinearLayer(torch.nn.Module):
+    def __init__(self, output_dim = 1):
+        super().__init__()
+        self.bias = torch.nn.Parameter(torch.zeros((output_dim,)))
+    def forward(self,x):
+        return torch.sum(x, dim=1) + self.bias

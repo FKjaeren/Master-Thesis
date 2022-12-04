@@ -7,7 +7,13 @@ from torch import nn
 import pickle
 import copy
 import os
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, FeaturesLinear
+import yaml
+from yaml.loader import SafeLoader
+
+# Open the file and load the file
+with open('config/experiment/exp1.yaml') as f:
+    hparams = yaml.load(f, Loader=SafeLoader)
 
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
@@ -46,22 +52,21 @@ class DeepFactorizationMachineModel(torch.nn.Module):
     H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
     """
 
-    def __init__(self, field_dims, embed_dim, n_unique_dict, device, batch_size, dropout):
+    def __init__(self, field_dims, hparams, n_unique_dict, device):
         super().__init__()
-        #mlp_dims = [22,107,47]
-        mlp_dims = [16,32,16]
-        #self.linear = FeaturesLinear(field_dims)
+        mlp_dims = [hparams["latent_dim1"],hparams["latent_dim2"],hparams["latent_dim3"]]
+        self.linear = FeaturesLinear()
         self.fm = FactorizationMachine(reduce_sum=True)
-        self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-        self.embed_output_dim = (len(field_dims)-1) * embed_dim
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=dropout)
+        self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims, n_unique_dict=n_unique_dict, device = device)
+        self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
+        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
 
     def forward(self, x):
         """
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         embed_x = self.embedding(x)
-        x = (self.fm(embed_x)*1.2737) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*1.341)
+        x = ((self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"]) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
         item_idx = torch.topk(x,k)

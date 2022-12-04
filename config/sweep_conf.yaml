@@ -5,9 +5,11 @@ metric:
   goal: minimize
 parameters:
   weight_decay: 
+    #values: [0.005324]
     min: 0.0001
     max: 0.05
-  lr: 
+  lr:
+    #values: [0.003665] 
     min: 0.00001
     max: 0.005
   latent_dim1: 
@@ -23,6 +25,7 @@ parameters:
     min: 4
     max: 64
   dropout: 
+    #values: [0.2677]
     min: 0.2
     max: 0.5
   #pos_weight: 
@@ -35,4 +38,5 @@ parameters:
     min: 0.0
     max: 2.0
   batch_size:
+    #values: [128]
     values: [16, 32, 64, 128, 256]

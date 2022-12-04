@@ -6,11 +6,17 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import logging
 import time
+# import pyyaml module
+import yaml
+from yaml.loader import SafeLoader
+from Src.deepFM import DeepFactorizationMachineModel
 
-
+# Open the file and load the file
+with open('config/experiment/exp1.yaml') as f:
+    hparams = yaml.load(f, Loader=SafeLoader)
 def main():
 
     class CreateDataset(Dataset):
@@ -45,7 +51,7 @@ def main():
     valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
-    batch_size = 128
+    batch_size = hparams["batch_size"]
 
     #dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
 
@@ -59,50 +65,15 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    class DeepFactorizationMachineModel(torch.nn.Module):
-        """
-        A Pytorch implementation of DeepFM.
-        Reference:
-            H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
-        """
+    dropout=hparams["dropout"]
+    embedding_dim = hparams["embed_dim"]
+    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
+    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
+    if hparams["pos_weight"] == "data_scale":
+        pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
+    else:
+        pos_weight = hparams["pow_weight"]
 
-        def __init__(self, field_dims, embed_dim, n_unique_dict, device, batch_size, dropout):
-            super().__init__()
-            mlp_dims = [16,32,16]
-            #self.linear = FeaturesLinear(field_dims)
-            self.fm = FactorizationMachine(reduce_sum=True)
-            self.embedding = FeaturesEmbedding(embedding_dim = embed_dim,num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-            self.embed_output_dim = (len(field_dims)-1) * embed_dim
-            self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=dropout)
-
-        def forward(self, x):
-            """
-            :param x: Long tensor of size ``(batch_size, num_fields)``
-            """
-            embed_x= self.embedding(x)
-            #if(torch.isnan(embed_x).sum() > 0):
-            #    print("Values with nan in embedding output: ",embed_x[torch.isnan(embed_x)])
-            #if(torch.isnan(self.fm(embed_x)).sum() > 0):
-            #    print("Values with nan in fm output: ",self.fm(embed_x)[torch.isnan(self.fm(embed_x))])
-            #if(torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim))).sum() > 0):
-            #    print("Values with nan in mlp output: ",self.mlp(embed_x.view(-1, self.embed_output_dim))[torch.isnan(self.mlp(embed_x.view(-1, self.embed_output_dim)))])
-            #x = self.linear(x) + self.fm(embed_x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-            x = (self.fm(embed_x)*1.2737) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*1.341)
-            #x = self.mlp(embed_x.view(-1, self.embed_output_dim))
-            #if(torch.isnan(torch.sigmoid(x.squeeze(1))).sum() > 0):
-            #    print("Values with nan in sigmoid output: ",torch.sigmoid(x.squeeze(1))[torch.isnan(torch.sigmoid(x.squeeze(1)))])
-            return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
-        def Reccomend_topk(x, k):
-            item_idx = torch.topk(x,k)
-            return item_idx
-
-
-    dropout=0.2677
-    embedding_dim = 26
-    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
-    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=0.005324, lr = 0.003665)
-    pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
-    #pos_weight = 100000
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
@@ -121,7 +92,7 @@ def main():
 
     DeepFMModel.apply(init_weights)
 
-    num_epochs = 10
+    num_epochs = hparams["num_epochs"]
     res = []
     Loss_list = []
     Valid_Loss_list = []
@@ -194,34 +165,11 @@ def main():
         res.append(end - start)
     res = np.array(res)
     PATH = 'Models/DeepFM_model.pth'
-    torch.save(best_model, PATH)
+    #torch.save(best_model, PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
-    ##test:
-    # 1 iteration:
-
-    dataiter = iter(test_loader)
-    X, y = next(dataiter)
-
-    output = DeepFMModel(X)
-
-    predictions = []
-    for i in output:
-        if i < 0.5:
-            predictions.append(0)
-        else:
-            predictions.append(1)
- 
-    print("The output of the model is: ", predictions)
-
-    print("The true labels are: ", y)
-
-    print("The accuracy of the model on 1 iterations is:", (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100,"%")
-
 if __name__ == '__main__':
     main()
-#print("The swwep id is: ", sweep_id)
-#wandb.agent(sweep_id, function = main,count = count, entity="frederikogjonesmaster")
