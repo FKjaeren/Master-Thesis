@@ -9,6 +9,13 @@ import os
 from google.cloud import storage
 import io
 
+import yaml
+from yaml.loader import SafeLoader
+
+# Open the file and load the file
+with open('config/experiment/exp1.yaml') as f:
+    hparams = yaml.load(f, Loader=SafeLoader)
+
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "masterthesis-366109-0c44ff859b6e.json"
 PROJECT = "MasterThesis"
 REGION = "eu-west1"
@@ -70,18 +77,18 @@ def load_data(storage_client):
     return customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, state_dict
 
 
-@st.cache
-def make_prediction(dcustomer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, state_dict):
+#@st.cache
+def make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, state_dict):
 
-    model = DeepFactorizationMachineModel(field_dims = train_df.columns, embed_dim=26, n_unique_dict = number_uniques_dict, device = 'cpu', batch_size=1,dropout=0.2677)
+    model = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
 
     model.load_state_dict(state_dict)
 
-    batch_size = 128
+    batch_size = hparams["batch_size"]
     _, full_data = load_recommendation_data(customer_input, None, customer_data, article_data, batch_size=batch_size, train_df=train_df)
 
-
-    outputs,_ = model(full_data)
+    data_without_target = full_data[:,:20]
+    outputs,_ = model(data_without_target)
     outputs = outputs.detach()
     conf, idx = torch.topk(outputs, Amount_input)
 

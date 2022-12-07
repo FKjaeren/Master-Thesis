@@ -4,11 +4,10 @@ from torch import nn
 import torch
 
 class FeaturesEmbedding(torch.nn.Module):
-    def __init__(self, embedding_dim, num_fields, batch_size, n_unique_dict,device,n_ages=111):
+    def __init__(self, embedding_dim, num_fields, n_unique_dict,device,n_ages=111):
         super().__init__()
         self.device = device
         self.embedding_dim = embedding_dim
-        self.batch_size = batch_size
         self.n_unique_dict = n_unique_dict
         self.n_ages = n_ages
         self.num_fields = len(num_fields)-1
@@ -33,27 +32,6 @@ class FeaturesEmbedding(torch.nn.Module):
         self.postal_code_embedding = nn.Embedding(self.n_unique_dict['n_postal']+1, embedding_dim).to(device)
         self.graphical_embedding = nn.Embedding(self.n_unique_dict['n_graphical']+1, embedding_dim).to(device)
     def forward(self, x):
-        #customer_embedding_final = torch.empty((self.batch_size, self.num_fields, self.embedding_dim))
-        #customer_embedding_final[:,0,:] = self.customer_embedding(x[:,0])
-        #customer_embedding_final[:,1,:] = self.product_embedding(x[:,1])
-        #customer_embedding_final[:,2,:] = self.FN_embedding(x[:,2])
-        #customer_embedding_final[:,3,:] = self.Active_embedding(x[:,3])
-        #customer_embedding_final[:,4,:] = self.club_member_status_embedding(x[:,4])
-        #customer_embedding_final[:,5,:] = self.fashion_news_frequency_embedding(x[:,5])
-        #customer_embedding_final[:,6,:] = self.age_embedding(x[:,6])
-        #customer_embedding_final[:,7,:] = self.postal_code_embedding(x[:,7])
-        #customer_embedding_final[:,8,:] = self.price_embedding(x[:,8])
-        #customer_embedding_final[:,9,:] = self.sales_channel_id_embedding(x[:,9])
-        #customer_embedding_final[:,10,:] = self.season_embedding(x[:,10])
-        #customer_embedding_final[:,11,:] = self.day_embedding(x[:,11])
-        #customer_embedding_final[:,12,:] = self.month_embedding(x[:,12])
-        #customer_embedding_final[:,13,:] = self.year_embedding(x[:,13])
-        #customer_embedding_final[:,14,:] = self.prod_name_embedding(x[:,14])
-        #customer_embedding_final[:,15,:] = self.product_type_name_embedding(x[:,15])
-        #customer_embedding_final[:,16,:] = self.graphical_embedding(x[:,16])
-        #customer_embedding_final[:,17,:] = self.colour_embedding(x[:,17])
-        #customer_embedding_final[:,18,:] = self.department_embedding(x[:,18])
-        #customer_embedding_final[:,19,:] = self.index_group_name_embedding(x[:,19])
         customer_embedding_final = torch.zeros((x.shape[0], self.num_fields, self.embedding_dim))
         customer_embedding_final[:,0,:] = self.customer_embedding(x[:,0])
         customer_embedding_final[:,1,:] = self.product_embedding(x[:,1])
@@ -125,3 +103,10 @@ class FactorizationMachine(torch.nn.Module):
         if self.reduce_sum:
             ix = torch.sum(ix, dim=1, keepdim=True)
         return 0.5 * ix
+
+class LinearLayer(torch.nn.Module):
+    def __init__(self, output_dim = 1):
+        super().__init__()
+        self.bias = torch.nn.Parameter(torch.zeros((output_dim,)))
+    def forward(self,x):
+        return torch.sum(x, dim=1) + self.bias

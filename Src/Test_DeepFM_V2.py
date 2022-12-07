@@ -23,7 +23,7 @@ difference = differenceA|differnceB
 """
 one_accuracy_all = []
 twelve_accuracy_all = []
-batch_size = 1024
+batch_size = 128
 
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
@@ -34,7 +34,9 @@ chunksize = 200000
 test_full_data_path = 'Data/Preprocessed/test_with_negative_subset_part1.csv'
 for c in customers:
     temp_accuracy = []
-    items, true_values = Get_Recommendations(c, model, test_df, test_full_set=test_df_negatives, test_full_data_path =test_full_data_path ,chunksize = chunksize,batch_size=batch_size, num_recommendations = num_recommendations, iter_data = False)
+    test_df_temp = test_df[test_df["customer_id"] == c]
+    test_df_negatives_temp = test_df_negatives[test_df_negatives["customer_id"]==c]
+    items, true_values = Get_Recommendations(customer_id = c, model = model, test_set=test_df_temp, test_full_set=test_df_negatives_temp, test_full_data_path =test_full_data_path ,chunksize = chunksize,batch_size=batch_size, num_recommendations = num_recommendations, iter_data = False)
     if any(x in items for x in true_values):
         accuracy = 1
     else:
