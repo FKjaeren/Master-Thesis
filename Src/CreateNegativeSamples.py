@@ -127,10 +127,9 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         negative_df = negative_df.merge(article_df, on = 'article_id', how = 'left')
         negative_df = negative_df.merge(customer_df, how = 'left', on ='customer_id')
         negative_df = negative_df[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
-            'month', 'year', 'season', 'prod_name', 'product_type_name',
+            'month', 'year', 'season', 'prod_name',
             'graphical_appearance_name', 'colour_group_name', 'department_name',
-            'index_group_name', 'FN', 'Active', 'club_member_status',
-            'fashion_news_frequency', 'age', 'postal_code','negative_values']]
+            'club_member_status', 'fashion_news_frequency', 'age', 'postal_code','negative_values']]
         negative_df = torch.tensor(negative_df.fillna(0).to_numpy(), dtype = torch.int)
         negative_df_temp = negative_df[0:(math.floor(num_negative_samples/batch_size)*21)]
         #remaining = negative_df[(math.floor(num_negative_samples/batch_size)*21)+1:]
@@ -144,4 +143,4 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         #print('Negative samples were created for the train dataframe, with the method "Random Choices"')
     else:
         print('Unreconized method')
-    return negative_df_temp
+    return negative_df
