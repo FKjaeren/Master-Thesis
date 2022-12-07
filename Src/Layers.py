@@ -53,6 +53,7 @@ class FeaturesEmbedding(torch.nn.Module):
         customer_embedding_final[:,17,:] = self.fashion_news_frequency_embedding(x[:,17])
         customer_embedding_final[:,18,:] = self.age_embedding(x[:,18])
         customer_embedding_final[:,19,:] = self.postal_code_embedding(x[:,19])
+
         return customer_embedding_final
 
 class MultiLayerPerceptron(torch.nn.Module):
