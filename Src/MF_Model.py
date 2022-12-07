@@ -1,4 +1,4 @@
-from math import prod
+#from math import prod
 import torch
 import platform
 #import torchvision
@@ -168,10 +168,10 @@ def ReadData(product, customer, features, batch_size, Subset = False):
     customer_features.insert(0, customer)
     prod_features.insert(0, product)
     if(Subset == True):
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features][0:150000]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features][0:150000]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv')[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -186,10 +186,10 @@ def ReadData(product, customer, features, batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
     else:
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv')[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -204,7 +204,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
 
-    with open(r"Data/Preprocessed/number_uniques_dict.pickle", "rb") as input_file:
+    with open(r"Data/Preprocessed/number_uniques_dict.pickle_subset", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
     #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
@@ -250,9 +250,9 @@ product_dataset, product_train_loader, customer_train_loader, product_valid_load
                                                             'graphical_appearance_name', 'colour_group_name',
                                                             'department_name'], batch_size=batch_size, Subset= True)
 
-embedding_dim = 26
+embedding_dim = 32
 model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict, device=device, n_ages = 111)
-optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.005324, lr = 0.003665)
+optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.0001, lr = 0.001)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 10
