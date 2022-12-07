@@ -144,4 +144,4 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         #print('Negative samples were created for the train dataframe, with the method "Random Choices"')
     else:
         print('Unreconized method')
-    return negative_df_temp
+    return negative_df
