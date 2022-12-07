@@ -204,7 +204,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
 
-    with open(r"Data/Preprocessed/number_uniques_dict.pickle_subset", "rb") as input_file:
+    with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
     #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
