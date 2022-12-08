@@ -90,12 +90,12 @@ def get_dataset(df, articles, number_negative_articles):
 
 ### Train model
 
-model = SimpleRecommender(customer_raw, articles_raw, 26)
+model = SimpleRecommender(customer_raw, articles_raw, 32)
 model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
-            optimizer=tf.keras.optimizers.SGD(learning_rate = 0.003665), 
+            optimizer=tf.keras.optimizers.SGD(learning_rate = 0.001), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =10, verbose=0)
+model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =5, verbose=0)
 
 # Path
 path = 'Models/BaselineModelIteration2.h5'
