@@ -2,25 +2,28 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-
-train = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
-valid = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
-
+df = pd.read_csv('Data/Raw/transactions_train_subset.csv')
+splitrange = round(0.8*len(df['customer_id']))
+splitrange2 = round(0.975*len(df['customer_id']))
+train = df.iloc[:splitrange]
+valid = df.iloc[splitrange+1:splitrange2]
 
 train_sub = train[['customer_id','article_id']]
 valid_sub = valid[['customer_id','article_id']]
 
 articles = pd.read_csv('Data/Preprocessed/article_df_numeric_subset.csv')
 customers = pd.read_csv('Data/Preprocessed/customer_df_numeric_subset.csv')
-articles_sub = articles[['article_id']].values.flatten()
-customers_sub = customers[['customer_id']].values.flatten()
+customer_raw = pd.read_csv('Data/Raw/customers_subset.csv')
+articles_raw = pd.read_csv('Data/Raw/articles_subset.csv')
+articles_raw = articles_raw[['article_id']].values.flatten()
+customer_raw = customer_raw[['customer_id']].values.flatten()
 
 
 class SimpleRecommender(tf.keras.Model):
     def __init__(self, customers_sub, articles_sub, embedding_dim):
         super(SimpleRecommender, self).__init__()
-        self.articles = tf.constant(articles_sub, dtype=tf.int32)
-        self.customers = tf.constant(customers_sub, dtype=tf.string)
+        self.articles = tf.constant(articles_raw, dtype=tf.int32)
+        self.customers = tf.constant(customer_raw, dtype=tf.string)
 
         self.article_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.articles, range(len(articles_sub))),-1)
         self.customer_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.customers, range(len(customers_sub))),-1)
@@ -73,7 +76,7 @@ class Mapper():
         random_negatives_indexes  = tf.random.uniform((self.num_negative_articles,),minval = 0, maxval = self.num_possible_articles , dtype = tf.int32) 
         negative_products =  tf.gather(self.possible_articles_tensor, random_negatives_indexes)
         candidates = tf.concat([article, negative_products], axis = 0)
-        return (customer, candidates), self.yxw
+        return (customer, candidates), self.y
 
 
 def get_dataset(df, articles, number_negative_articles):
@@ -82,17 +85,17 @@ def get_dataset(df, articles, number_negative_articles):
 
     dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
     dataset = dataset.map(Mapper(articles, number_negative_articles)) 
-    dataset = dataset.batch(1024)
+    dataset = dataset.batch(128)
     return dataset 
 
 ### Train model
 
-model = SimpleRecommender(customers_sub, articles_sub, 32)
+model = SimpleRecommender(customer_raw, articles_raw, 26)
 model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
-            optimizer=tf.keras.optimizers.SGD(learning_rate = 100.), 
+            optimizer=tf.keras.optimizers.SGD(learning_rate = 0.003665), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-model.fit(get_dataset(train_sub, articles_sub, 10), validation_data = get_dataset(valid_sub, articles_sub,10), epochs =10)
+model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =10, verbose=0)
 
 # Path
 path = 'Models/BaselineModelIteration2'
