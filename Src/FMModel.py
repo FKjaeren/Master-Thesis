@@ -6,7 +6,6 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-import os
 from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import yaml
 from yaml.loader import SafeLoader
@@ -32,9 +31,9 @@ class DatasetIter(Dataset):
 
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
-
-        self.dataset = dataset[:,0:-1]
-        self.targets = dataset[:,-1:].float()
+        #tensorData = torch.tensor(Dataset.values, dtype=torch.int)
+        self.dataset = dataset[:,:-1]
+        self.targets = dataset[:,-1:]#.float()
 
     def __len__(self):
         return len(self.dataset)
@@ -45,7 +44,7 @@ class CreateDataset(Dataset):
         shape_value = self.all_data.shape
         return shape_value
 
-class DeepFactorizationMachineModel(torch.nn.Module):
+class FactorizationMachineModel(torch.nn.Module):
     """
     A Pytorch implementation of DeepFM.
     Reference:
@@ -66,7 +65,9 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         :param x: Long tensor of size ``(batch_size, num_fields)``
         """
         embed_x = self.embedding(x)
-        x = ((self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"]) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
+
+        x = ((self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"])# + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
+
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
         item_idx = torch.topk(x,k)

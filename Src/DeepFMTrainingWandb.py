@@ -5,18 +5,19 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron#, FeaturesLinear
+from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
 import wandb
 import time
 import torch
+from deepFM import DeepFactorizationMachineModel
 
 
 log = logging.getLogger(__name__)
 sweep_configuration = {
-    'method': 'random',
+    'method': 'bayes',
     #'name': 'sweep',
     'metric': {
         'goal': 'minimize', 
@@ -29,7 +30,7 @@ sweep_configuration = {
         'latent_dim2':{'max': 128, 'min':4},
         'latent_dim3':{'max': 64, 'min':4},
         'embed_dim':{'max': 64, 'min':4},
-        'dropout':{'max': 0.5, 'min':0.1},
+        'dropout':0.2677 #{'max': 0.5, 'min':0.1},
         #'pos_weight':{'max': 200, 'min':3}
     }
 }
@@ -79,16 +80,16 @@ def main():
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
     train_subset = train_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
-    train_subset = train_subset.sample(frac=0.2)
+    train_subset = train_subset.sample(frac=0.5)
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
     valid_subset = valid_df.drop_duplicates(subset = ["customer_id","target"], keep="last")
-    valid_subset = valid_subset.sample(frac=0.2)
+    valid_subset = valid_subset.sample(frac=0.5)
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device('cpu')
 
     train_tensor = torch.tensor(train_subset.fillna(0).to_numpy(), dtype = torch.int)
-    valid_tensor = torch.tensor(valid_subset.fillna(0).to_numpy(), dtype = torch.int)
+    valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
     test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
 
     train_dataset = CreateDataset(train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
@@ -109,38 +110,11 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    class DeepFactorizationMachineModel(torch.nn.Module):
-        """
-        A Pytorch implementation of DeepFM.
-        Reference:
-            H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
-        """
-
-        def __init__(self, field_dims, hparams, n_unique_dict, device, batch_size):
-            super().__init__()
-            mlp_dims = [hparams["latent_dim1"], hparams["latent_dim2"], hparams["latent_dim3"]]
-            #self.linear = FeaturesLinear(field_dims)
-            self.fm = FactorizationMachine(reduce_sum=True)
-            self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims ,batch_size= batch_size, n_unique_dict=n_unique_dict, device = device)
-            self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
-            self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, hparams["dropout"])
-
-        def forward(self, x):
-            """
-            :param x: Long tensor of size ``(batch_size, num_fields)``
-            """
-            embed_x = self.embedding(x)
-
-            x = (self.fm(embed_x)*hparams['fm_weight']) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams['mlp_weight'])
- 
-            return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
-        def Reccomend_topk(x, k):
-            item_idx = torch.topk(x,k)
-            return item_idx
-
-    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams = hparams, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size)
+    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams = hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
+
     pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
+
     #pos_weight = 100000
     #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(hparams["pos_weight"]))
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))

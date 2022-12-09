@@ -5,7 +5,7 @@ import pickle
 #import matplotlib.pyplot as plt
 from sklearn import preprocessing
 import copy
-from Src.CreateNegativeSamples import CreateNegativeSamples
+from CreateNegativeSamples import CreateNegativeSamples
 #import seaborn as sns
 
 #from Src.PreprocessIdData import Article_id_encoder, Price_encoder

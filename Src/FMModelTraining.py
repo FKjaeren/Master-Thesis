@@ -6,16 +6,16 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
+from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import logging
 import time
 # import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
-from deepFM import DeepFactorizationMachineModel
+from Src.FMModel import FactorizationMachineModel
 
 # Open the file and load the file
-with open('config/experiment/exp1.yaml') as f:
+with open('config/experiment/train_FM.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 def main():
 
@@ -65,9 +65,7 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    dropout=hparams["dropout"]
-    embedding_dim = hparams["embed_dim"]
-    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
+    DeepFMModel = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
         pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
@@ -165,7 +163,7 @@ def main():
         res.append(end - start)
     res = np.array(res)
     PATH = 'Models/DeepFM_model.pth'
-    torch.save(best_model, PATH)
+    #torch.save(best_model, PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)
