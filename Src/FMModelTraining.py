@@ -164,7 +164,7 @@ def main():
     PATH = 'Models/FM_model.pth'
     torch.save(best_model, PATH)
 
-    print("finished training")3
+    print("finished training")
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
