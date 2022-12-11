@@ -6,7 +6,6 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import logging
 import time
 # import pyyaml module
@@ -65,8 +64,8 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    DeepFMModel = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
-    optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
+    FMModel = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
+    optimizer = torch.optim.Adam(FMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
         pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
     else:
@@ -88,7 +87,7 @@ def main():
                 m.weight.data[m.padding_idx].zero_()        
 
 
-    DeepFMModel.apply(init_weights)
+    FMModel.apply(init_weights)
 
     num_epochs = hparams["num_epochs"]
     res = []
@@ -104,7 +103,7 @@ def main():
         running_loss = 0.
         running_loss_val = 0.
         epoch_loss = []
-        DeepFMModel.train()
+        FMModel.train()
 
         for batch, (X,y) in enumerate(train_loader):
             # Zero your gradients for every batch!
@@ -112,7 +111,7 @@ def main():
             #
             dataset = X.to(device)
             # Make predictions for this batch
-            outputs, loss_output = DeepFMModel(dataset)
+            outputs, loss_output = FMModel(dataset)
             #if(torch.isnan(X).sum() > 0):
             #    print("SE her Values with nan in X: ",X[torch.isnan(X)])
             #if(torch.isnan(outputs).sum() > 0):
@@ -140,10 +139,10 @@ def main():
 
         epoch_loss_value = np.mean(epoch_loss)
         Loss_list.append(epoch_loss_value)
-        DeepFMModel.eval()
+        FMModel.eval()
         epoch_valid_loss = []
         for batch, (X_valid,y_valid) in enumerate(valid_loader):
-            outputs, loss_output = DeepFMModel(X_valid)
+            outputs, loss_output = FMModel(X_valid)
             loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
@@ -156,16 +155,16 @@ def main():
         epoch_valid_loss_value = np.mean(epoch_valid_loss)
         Valid_Loss_list.append(epoch_valid_loss_value)
         if(epoch_valid_loss_value < Best_loss):
-            best_model = copy.deepcopy(DeepFMModel)
+            best_model = copy.deepcopy(FMModel)
             Best_loss = epoch_valid_loss_value
 
         end = time.time()
         res.append(end - start)
     res = np.array(res)
-    PATH = 'Models/DeepFM_model.pth'
-    #torch.save(best_model, PATH)
+    PATH = 'Models/FM_model.pth'
+    torch.save(best_model, PATH)
 
-    print("finished training")
+    print("finished training")3
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))

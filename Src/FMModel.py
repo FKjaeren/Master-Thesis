@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
+from Src.Layers import FactorizationMachine, FeaturesEmbedding, LinearLayer
 import yaml
 from yaml.loader import SafeLoader
 
@@ -53,12 +53,10 @@ class FactorizationMachineModel(torch.nn.Module):
 
     def __init__(self, field_dims, hparams, n_unique_dict, device):
         super().__init__()
-        mlp_dims = [hparams["latent_dim1"],hparams["latent_dim2"],hparams["latent_dim3"]]
         self.linear = LinearLayer()
         self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims, n_unique_dict=n_unique_dict, device = device)
         self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
 
     def forward(self, x):
         """
