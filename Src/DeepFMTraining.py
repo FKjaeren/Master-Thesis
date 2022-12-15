@@ -164,8 +164,9 @@ def main():
         end = time.time()
         res.append(end - start)
     res = np.array(res)
-    PATH = 'Models/DeepFM_model.pth'
-    torch.save(best_model, PATH)
+    PATH = 'Models/DeepFM_model_test.pth'
+    torch.save(best_model.state_dict(), PATH)
+    #torch.save(best_model, PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)

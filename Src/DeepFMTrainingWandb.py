@@ -89,7 +89,7 @@ def main():
     device = torch.device('cpu')
 
     train_tensor = torch.tensor(train_subset.fillna(0).to_numpy(), dtype = torch.int)
-    valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
+    valid_tensor = torch.tensor(valid_subset.fillna(0).to_numpy(), dtype = torch.int)
     test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
 
     train_dataset = CreateDataset(train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])

@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-df = pd.read_csv('Data/Raw/transactions_train_subset.csv')
+df = pd.read_csv('Data/Raw/transactions_train_subset.csv')[:100000]
 splitrange = round(0.8*len(df['customer_id']))
 splitrange2 = round(0.975*len(df['customer_id']))
 train = df.iloc[:splitrange]
 valid = df.iloc[splitrange+1:splitrange2]
+
 
 train_sub = train[['customer_id','article_id']]
 valid_sub = valid[['customer_id','article_id']]
@@ -45,25 +46,21 @@ class SimpleRecommender(tf.keras.Model):
         article_embedding_values = self.articles_embed(article_embedding_index)
 
         return tf.squeeze(self.dot([customer_embbeding_values, article_embedding_values]),1)
-    
-    def call_item_item(self, article):
-        article_x = self.article_table.lookup(article)
-        article_embeddings = tf.expand_dims(self.articles_embed(article_x),0)
-        all_articles_embeddings = tf.expand_dims(self.articles_embed.embeddings,0)
-        scores = tf.reshape(self.dot([article_embeddings, all_articles_embeddings]), [-1])
-
-        top_scores, top_indeces = tf.math.top_k(scores, k = 100)
-        top_ids = tf.gather(self.articles, top_indeces)
-        return top_ids, top_scores
-    def Customer_recommendation(self, customer, k):
+    def _Customer_recommendation(self, customer, k):
         customer_x = self.customer_table.lookup(customer)
         customer_embeddings = tf.expand_dims(self.customer_embed(customer_x),0)
         all_articles_embeddings = tf.expand_dims(self.articles_embed.embeddings,0)
         scores = tf.reshape(self.dot([customer_embeddings, all_articles_embeddings]), [-1])
-
+        print(scores.shape)
         top_scores, top_indeces = tf.math.top_k(scores, k = k)
         top_ids = tf.gather(self.articles, top_indeces)
         return top_ids, top_scores
+    
+    @tf.function(
+        input_signature=[tf.TensorSpec(shape=(1, 1), dtype=tf.string), tf.TensorSpec(shape=(None), dtype=tf.int32)]
+    )
+    def Customer_recommendation(self, customer, k):
+        return self._Customer_recommendation(customer, k)
 
 
 class Mapper():
@@ -98,11 +95,88 @@ model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True),
 model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =5, verbose=0)
 
 # Path
-path = 'Models/BaselineModelIteration2.h5'
+path = 'Models/test_baseline_model_with_tf_function2'
 
 ## save
-#model.save_weights(path)
-
+#model.save_weights(path, save_format='tf')
 #Forsøg 2 på at save
-model.save(path)
+model.save(path, save_format='tf')
+#forsøg 3
 #tf.saved_model.save(model, path)
+
+
+
+test = df.iloc[splitrange2+1:]
+
+test_sub = test[['customer_id','article_id']]
+
+
+k = 6
+
+acc = []
+
+
+
+
+
+def get_dataset(df):
+    dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
+    article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
+
+    dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
+    
+    dataset = dataset.batch(1)
+    return dataset 
+
+
+dataset = get_dataset(test_sub)
+customers = test_sub["customer_id"].unique()
+
+
+
+for c, a in dataset:
+    #print(a)
+    #a= batch[:,0]
+    #a = batch[:,1]
+    recommendations, scores = model.Customer_recommendation(c, k)
+    print(a)
+    print(recommendations)
+    if a in recommendations:
+        acc.append(1)
+    else:
+        acc.append(0)
+
+final_acc = np.mean(acc)
+
+
+if (tf.Tensor([[825714001]])) in (tf.Tensor([825714001, 557908029, 816431002, 849931001, 891771001, 764542002])):
+    print("hej")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+test_customer = '6f494dbbc7c70c04997b14d3057edd33a3fc8c0299362967910e80b01254c656'
+test_article = 806388002
+
+print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
+
+print("Recs for customer {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))
+

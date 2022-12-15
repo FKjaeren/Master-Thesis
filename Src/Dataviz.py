@@ -1,18 +1,22 @@
+#%%
 import numpy as np 
 import pandas as pd
 
 import matplotlib.pyplot as plt
 
 import seaborn as sns
-data_path = 'Data/Preprocessed/'
+data_path = 'Data/Raw/'
 
-
-df_a = pd.read_csv(data_path+'df_a.csv', index_col=0)
+""" 
+df_a = pd.read_csv(data_path+'article_df_numeric_subset.csv', index_col=0)
 df_c = pd.read_csv(data_path+'df_c.csv', index_col=0)
 df_t = pd.read_csv(data_path+'df_t.csv', index_col=0)
+ """
+
+df_a = pd.read_csv(data_path+'articles_subset.csv', index_col=0)
+df_t = pd.read_csv(data_path + 'transactions_train.csv', index_col=0)
 
 
-# Start exploration of data
 
 # calculate number of sold products
 sold_count = df_t['article_id'].value_counts()
@@ -29,11 +33,82 @@ df_sold = df_sold.sort_values(by='sold_count', ascending=False)
 # Lets see if there are any popular products in the collection
 
 
-top500 = df_sold.iloc[:500]
+top20 = df_sold.iloc[:20]
 
-pivot = pd.pivot_table(top500, index= ["prod_name"], values='sold_count', aggfunc=np.sum)
-pivot = pivot.reset_index()
-pivot = pivot.sort_values("sold_count", ascending=False)
+
+
+pivot1 = pd.pivot_table(top20, index= ["prod_name"], values='sold_count', aggfunc=np.sum)
+pivot1 = pivot1.reset_index()
+pivot1 = pivot1.sort_values("sold_count", ascending=False)
+
+
+ax = sns.barplot(x="sold_count", y="prod_name", data=pivot1)
+#plt.setp(ax.get_xticklabels(), rotation=90)
+ax.set_title("Top 20 most sold articles")
+""" 
+for var in ax.containers:
+    ax.bar_label(var, fontsize=9) """
+plt.xlabel("Number of sold products")
+plt.ylabel("")
+plt.show()
+
+
+pivot2 = pd.pivot_table(top20, index= ["department_name"], values='sold_count', aggfunc=np.sum)
+pivot2 = pivot2.reset_index()
+pivot2 = pivot2.sort_values("sold_count", ascending=False)
+
+
+ax = sns.barplot(x="sold_count", y="department_name", data=pivot2.iloc[:10])
+#plt.setp(ax.get_xticklabels(), rotation=90)
+ax.set_title("Top 10 most popular departments")
+""" 
+for var in ax.containers:
+    ax.bar_label(var, fontsize=9) """
+plt.xlabel("Number of sold products")
+plt.ylabel("")
+plt.show()
+
+pivot3 = pd.pivot_table(top20, index= ["colour_group_name"], values='sold_count', aggfunc=np.sum)
+pivot3 = pivot3.reset_index()
+pivot3 = pivot3.sort_values("sold_count", ascending=False)
+
+
+ax = sns.barplot(x="sold_count", y="colour_group_name", data=pivot3)
+#plt.setp(ax.get_xticklabels(), rotation=90)
+ax.set_title("Top 10 most popular departments")
+""" 
+for var in ax.containers:
+    ax.bar_label(var, fontsize=9) """
+plt.xlabel("Number of sold products")
+plt.ylabel("")
+plt.show()
+
+
+
+
+fig, axes = plt.subplots(1,3, figsize=(5, 5), sharey=True)
+fig.suptitle('Popular article characteristics')
+
+
+# popular products
+plot1 = sns.barplot(ax=axes[0], x="prod_name", y="sold_count", data=pivot1)
+axes[0].set_title("Articles")
+
+for var in plot1.containers:
+    plot1.bar_label(var, fontsize=12)
+
+# popular departments
+sns.barplot(ax=axes[1], x="department_name", y="sold_count", data=pivot2)
+axes[1].set_title("Department")
+
+# popular colours
+sns.barplot(ax=axes[2], x="colour_group_name", y="sold_count", data=pivot3)
+axes[2].set_title("Colour")
+
+fig.show()
+
+# Start exploration of data
+
 
 ax = sns.barplot(x="prod_name", y="sold_count", data=pivot.iloc[0:29])
 plt.setp(ax.get_xticklabels(), rotation=90)
@@ -164,3 +239,5 @@ plt.show()
 
 
 
+
+# %%
