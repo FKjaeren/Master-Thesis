@@ -241,7 +241,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
 
     return product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes, product_test_loader, customer_test_loader
 
-batch_size = 128
+batch_size = 256
 
 product_dataset, product_train_loader, customer_train_loader, product_valid_loader, customer_valid_loader, number_uniques_dict, dataset_shapes,_ ,_ = ReadData(
                                                             product='article_id', customer='customer_id',features= ['club_member_status',
@@ -256,6 +256,7 @@ optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.0001, lr = 0.001
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 10
+
 
 #Num_classes = len(Product_data['product_id'])
 dataiter = iter(product_train_loader)
@@ -283,6 +284,9 @@ for epoch in range(1,num_epochs+1):
         #print(product_data_batch)
         product_id = product_data_batch[:,0]
         product_id = product_id.type(torch.long)
+
+        product_id = torch.nn.functional.one_hot(product_id, number_uniques_dict["n_products"])
+
         # Zero your gradients for every batch!
         optimizer.zero_grad()
         #
