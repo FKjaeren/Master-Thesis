@@ -5,38 +5,43 @@ metric:
   goal: minimize
 parameters:
   weight_decay: 
-    #values: [0.005324]
-    min: 0.0001
-    max: 0.05
+    values: [0.003704]
+    #min: 0.0001
+    #max: 0.05
   lr:
-    #values: [0.003665] 
-    min: 0.00001
-    max: 0.005
-  latent_dim1: 
-    min: 4
-    max: 64
+    values: [0.002159] 
+    #min: 0.00001
+    #max: 0.005
+  latent_dim1:
+    values: [15]
+    #min: 4
+    #max: 64
   latent_dim2: 
-    min: 4
-    max: 128
-  latent_dim3: 
-    min: 4
-    max: 64
+    values: [35]
+    #min: 4
+    #max: 128
+  latent_dim3:
+    values: [40]
+    #min: 4
+    #max: 64
   embed_dim: 
     min: 4
-    max: 64
+    max: 128
   dropout: 
-    #values: [0.2677]
-    min: 0.2
-    max: 0.5
+    values: [0.2677]
+    #min: 0.2
+    #max: 0.5
   #pos_weight: 
   #  min: 3
   #  max: 200
   fm_weight:
-    min: 0.0
-    max: 2.0
+    values: [0.9347]
+    #min: 0.0
+    #max: 2.0
   mlp_weight:
-    min: 0.0
-    max: 2.0
+    values: [1.66]
+    #min: 0.0
+    #max: 2.0
   batch_size:
     values: [128]
     #values: [16, 32, 64, 128, 256]
