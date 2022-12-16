@@ -13,4 +13,4 @@ WORKDIR /app
 COPY . /app
 
 # Run
-ENTRYPOINT ["streamlit", "run", "app.py","--server.port=8501"]
+ENTRYPOINT ["streamlit", "run", "app.py","--server.port=8501", "--server.headless", "true", "--server.fileWatcherType", "none", "--browser.gatherUsageStats", "false"]

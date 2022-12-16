@@ -11,4 +11,5 @@ batch_size: 128
 fm_weight: 0.9347
 mlp_weight: 1.66
 num_epochs: 4
+model_path: "Models/DeepFM_modelV2.pth"
 

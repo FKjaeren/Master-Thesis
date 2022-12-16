@@ -170,8 +170,8 @@ def ReadData(product, customer, features, batch_size, Subset = False):
     if(Subset == True):
         UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv')[prod_features]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv', nrows= 100000)[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv', nrows = 100000)[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -253,7 +253,7 @@ product_dataset, product_train_loader, customer_train_loader, product_valid_load
 embedding_dim = 32
 model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict, device=device, n_ages = 111)
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.0001, lr = 0.001)
-model =model.to(device)
+#model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
 num_epochs = 2
 
