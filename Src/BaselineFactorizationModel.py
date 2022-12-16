@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-df = pd.read_csv('Data/Raw/transactions_train_subset.csv')[:100000]
+df = pd.read_csv('Data/Raw/transactions_train_subset.csv')
 splitrange = round(0.8*len(df['customer_id']))
 splitrange2 = round(0.975*len(df['customer_id']))
 train = df.iloc[:splitrange]
@@ -82,7 +82,7 @@ def get_dataset(df, articles, number_negative_articles):
 
     dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
     dataset = dataset.map(Mapper(articles, number_negative_articles)) 
-    dataset = dataset.batch(128)
+    dataset = dataset.batch(256)
     return dataset 
 
 ### Train model
@@ -103,80 +103,3 @@ path = 'Models/test_baseline_model_with_tf_function2'
 model.save(path, save_format='tf')
 #forsøg 3
 #tf.saved_model.save(model, path)
-
-
-
-test = df.iloc[splitrange2+1:]
-
-test_sub = test[['customer_id','article_id']]
-
-
-k = 6
-
-acc = []
-
-
-
-
-
-def get_dataset(df):
-    dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
-    article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
-
-    dataset = tf.data.Dataset.from_tensor_slices((dummy_customer_tensor,article_tensor))
-    
-    dataset = dataset.batch(1)
-    return dataset 
-
-
-dataset = get_dataset(test_sub)
-customers = test_sub["customer_id"].unique()
-
-
-
-for c, a in dataset:
-    #print(a)
-    #a= batch[:,0]
-    #a = batch[:,1]
-    recommendations, scores = model.Customer_recommendation(c, k)
-    print(a)
-    print(recommendations)
-    if a in recommendations:
-        acc.append(1)
-    else:
-        acc.append(0)
-
-final_acc = np.mean(acc)
-
-
-if (tf.Tensor([[825714001]])) in (tf.Tensor([825714001, 557908029, 816431002, 849931001, 891771001, 764542002])):
-    print("hej")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-test_customer = '6f494dbbc7c70c04997b14d3057edd33a3fc8c0299362967910e80b01254c656'
-test_article = 806388002
-
-print("Recs for item {}: {}".format(test_article, model.call_item_item(tf.constant(test_article, dtype=tf.int32))))
-
-print("Recs for customer {}: {}".format(test_customer, model.Customer_recommendation(tf.constant(test_customer, dtype=tf.string), k=12)))
-

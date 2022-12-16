@@ -255,7 +255,7 @@ model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=bat
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.0001, lr = 0.001)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-num_epochs = 10
+num_epochs = 2
 
 
 #Num_classes = len(Product_data['product_id'])
@@ -284,8 +284,6 @@ for epoch in range(1,num_epochs+1):
         #print(product_data_batch)
         product_id = product_data_batch[:,0]
         product_id = product_id.type(torch.long)
-
-        product_id = torch.nn.functional.one_hot(product_id, number_uniques_dict["n_products"])
 
         # Zero your gradients for every batch!
         optimizer.zero_grad()
