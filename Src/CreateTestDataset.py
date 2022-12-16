@@ -10,8 +10,11 @@ train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
 articles_df = pd.read_csv('Data/Preprocessed/article_df_numeric_subset.csv')
 customer_df = pd.read_csv('Data/Preprocessed/customer_df_numeric_subset.csv')
 
+customers = test_df.customer_id.unique()[0:10000]
 
-test_df_subset = test_df.sample(15000, random_state=42)
+test_df_subset = test_df[test_df["customer_id"].isin(customers)]
+
+#test_df_subset = test_df.sample(15000, random_state=42)
 
 test_df_subset.to_csv('../../../../../../work3/s174478/Data/test_dataset_subset.csv', index = False)
 del test_df

@@ -26,7 +26,8 @@ with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input
     number_uniques_dict = pickle.load(input_file)
 #model = DeepFactorizationMachineModel(field_dims = test_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
 #model.load_state_dict(torch.load('Models/DeepFM_model_Final.pth'))
-model = torch.load('Models/DeepFM_modelV2.pth')
+modelpath = hparams["model_path"]
+model = torch.load(modelpath)
 num_recommendations = 12
 chunksize = 200000
 test_full_data_path = '../../../../../../work3/s174478/Data/test_dataset_with_negative_part1.csv'
