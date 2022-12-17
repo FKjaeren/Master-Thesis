@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, LinearLayer
+from Layers import FactorizationMachine, FeaturesEmbedding, LinearLayer
 import yaml
 from yaml.loader import SafeLoader
 

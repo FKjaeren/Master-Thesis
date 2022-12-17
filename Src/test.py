@@ -20,3 +20,10 @@ else:
     temp_accuracy_final = sum((np.sort(temp_accuracy)[0:len(true_values)]))/len(true_values)
 
 twelve_accuracy_all.append(temp_accuracy_final)
+
+value_1 = 58758.57/12000
+value_2 = 59099.06/12000
+
+values = [value_1,value_2]
+np.mean(values)
+np.std(values)

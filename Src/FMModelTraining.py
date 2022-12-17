@@ -11,7 +11,7 @@ import time
 # import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
-from Src.FMModel import FactorizationMachineModel
+from FMModel import FactorizationMachineModel
 
 # Open the file and load the file
 with open('config/experiment/train_FM.yaml') as f:
@@ -162,7 +162,7 @@ def main():
         res.append(end - start)
     res = np.array(res)
     PATH = 'Models/FM_model.pth'
-    torch.save(best_model, PATH)
+    torch.save(best_model.state_dict(), PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)
