@@ -161,7 +161,7 @@ def main():
         end = time.time()
         res.append(end - start)
     res = np.array(res)
-    PATH = 'Models/FM_model.pth'
+    PATH = hparams["model_path"]
     torch.save(best_model.state_dict(), PATH)
 
     print("finished training")

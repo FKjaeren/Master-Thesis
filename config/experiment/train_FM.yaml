@@ -11,6 +11,6 @@ batch_size: 128
 fm_weight: 1
 mlp_weight: 0
 num_epochs: 5
-model_path: "Models/FM_model.pth"
+model_path: "Models/FM_modelV2.pth"
 
 

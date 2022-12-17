@@ -98,7 +98,6 @@ def main():
     Valid_Loss_list = []
     Val_acc_list = []
     Train_Acc_list = []
-    Best_loss = np.infty
     for epoch in range(1,num_epochs+1):
         start = time.time()
 
@@ -164,7 +163,7 @@ def main():
         end = time.time()
         res.append(end - start)
     res = np.array(res)
-    PATH = 'Models/DeepFM_model_test.pth'
+    PATH = hparams["model_path"]
     torch.save(best_model.state_dict(), PATH)
     #torch.save(best_model, PATH)
 
@@ -172,5 +171,7 @@ def main():
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
+    print("Training accuracy list is: ", Train_Acc_list)
+    print("Validation accuracy list is: ", Val_acc_list)
 if __name__ == '__main__':
     main()
