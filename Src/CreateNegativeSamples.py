@@ -71,7 +71,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
             ## Get a random day in the period which the test set spans:
             negative_df['day'] = np.random.randint(15, 22, negative_df.shape[0])
             negative_df['month'] = 9
-            negative_df['year'] = np.ones(negative_df.shape[0])
+            negative_df['year'] = np.zeros(negative_df.shape[0])
 
             negative_df.loc[(negative_df['month']>= 1) & (negative_df['month'] <=2), 'season'] = 'Winter'
             negative_df.loc[(negative_df['month'] == 12), 'season'] = 'Winter' 
