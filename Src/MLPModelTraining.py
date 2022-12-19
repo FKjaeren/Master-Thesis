@@ -12,10 +12,10 @@ import time
 # import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
-from deepFM import DeepFactorizationMachineModel
+from MLP_Model import MultiLayerPerceptronArchitecture
 
 # Open the file and load the file
-with open('config/experiment/exp1.yaml') as f:
+with open('config/experiment/Train_MLP.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 def main():
 
@@ -65,9 +65,7 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    dropout=hparams["dropout"]
-    embedding_dim = hparams["embed_dim"]
-    DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
+    DeepFMModel = MultiLayerPerceptronArchitecture(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
         pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]

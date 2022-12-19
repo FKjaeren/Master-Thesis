@@ -6,12 +6,12 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, LinearLayer
+from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import yaml
 from yaml.loader import SafeLoader
 
 # Open the file and load the file
-with open('config/experiment/train_FM.yaml') as f:
+with open('config/experiment/Train_MLP.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 
 class DatasetIter(Dataset):
@@ -44,7 +44,7 @@ class CreateDataset(Dataset):
         shape_value = self.all_data.shape
         return shape_value
 
-class FactorizationMachineModel(torch.nn.Module):
+class MultiLayerPerceptronArchitecture(torch.nn.Module):
     """
     A Pytorch implementation of DeepFM.
     Reference:
@@ -53,10 +53,12 @@ class FactorizationMachineModel(torch.nn.Module):
 
     def __init__(self, field_dims, hparams, n_unique_dict, device):
         super().__init__()
+        mlp_dims = [hparams["latent_dim1"],hparams["latent_dim2"],hparams["latent_dim3"]]
         self.linear = LinearLayer()
         self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims, n_unique_dict=n_unique_dict, device = device)
         self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
+        self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
 
     def forward(self, x):
         """
@@ -64,7 +66,7 @@ class FactorizationMachineModel(torch.nn.Module):
         """
         embed_x = self.embedding(x)
 
-        x = ((self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"])# + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
+        x = (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
 
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):

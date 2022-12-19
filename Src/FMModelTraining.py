@@ -168,5 +168,6 @@ def main():
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
+    print("Val Acc list: ", Val_acc_list)
 if __name__ == '__main__':
     main()

@@ -10,7 +10,7 @@ pos_weight: "data_scale"
 batch_size: 128
 fm_weight: 1
 mlp_weight: 0
-num_epochs: 5
+num_epochs: 4
 model_path: "Models/FM_modelV2.pth"
 
 

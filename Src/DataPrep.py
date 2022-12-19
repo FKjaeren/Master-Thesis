@@ -396,5 +396,5 @@ def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10
 
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'FM'" to get dataframes for a Factorization machine model.
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'MF'" to get dataframes for a Matrix Factorization model.
-num_negative_samples = 10
+num_negative_samples = 20
 GetPreprocessedDF(transactions_df,n_negative_samples=num_negative_samples, Method = 'FM')
