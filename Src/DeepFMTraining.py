@@ -147,6 +147,7 @@ def main():
             outputs, loss_output = DeepFMModel(X_valid)
             loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
+            predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             running_loss_val += loss_val
             Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
             Val_acc_list.append(Val_acc)
