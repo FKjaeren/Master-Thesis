@@ -1,8 +1,10 @@
 # Master-Thesis
 Frederik Kjær and Jonas Levin's Master Thesis:
 
-As the datasets were to large to store on out github, the user should by ones self go and download them on this kaggle link, after cloning the repository:
-https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data
+As the datasets were to large to store on our github, the user should by ones self go and download the datasets on this kaggle link, after cloning the repository:
+https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data.
+
+The data should be stored in a subfolder called "Raw" inside of the folder "Data", which lies within the main file of the repository called "Master-Thesis".
 
 In order to reproduce the results presented in the thesis one should:
 
