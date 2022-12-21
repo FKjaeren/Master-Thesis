@@ -1,5 +1,5 @@
 import torchdrift
-from Src.deepFM import DeepFactorizationMachineModel
+from deepFM import DeepFactorizationMachineModel
 import torch
 import pickle
 from torch.utils.data import Dataset
@@ -8,6 +8,8 @@ import copy
 import pandas as pd
 import pytorch_lightning as pl
 
+import yaml
+from yaml.loader import SafeLoader
 
 
 class CreateDataset(Dataset):
@@ -26,7 +28,7 @@ class CreateDataset(Dataset):
             return shape_value
 
 
-valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')[0:10000]
+valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')[:20000]
 valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
 
 
@@ -83,7 +85,7 @@ class OurDataModule(pl.LightningDataModule):
         return torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler,
                                            collate_fn=self.collate_fn)
 
-
+""" 
 datamodule = OurDataModule(valid_dataset)
 #torch.utils.data.DataLoader(valid_dataset, batch_size=128, num_workers=1, shuffle=False)
 
@@ -104,15 +106,20 @@ ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_tran
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-
-batch_size = 128
-embedding_dim = 26
-dropout=0.2677
+with open('config/experiment/exp1.yaml') as f:
+    hparams = yaml.load(f, Loader=SafeLoader)
+#batch_size = 128
+#embedding_dim = 38
+#dropout=0.4931
 device = 'cpu'
-path = 'Models/DeepFM_model_Final.pth'
-model = DeepFactorizationMachineModel(field_dims = valid_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
+#hparams = 
+path = 'Models/DeepFM_modelV2.pth'
+DeepFMModel = DeepFactorizationMachineModel(field_dims = valid_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
+#optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
 
-model.load_state_dict(torch.load(path))
+#model = DeepFactorizationMachineModel(field_dims = valid_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
+
+DeepFMModel.load_state_dict(torch.load(path))
 
 
 
@@ -122,18 +129,18 @@ detector = torchdrift.detectors.ks.KSDriftDetector()
 
 
 
-""" odd_input = (inputs + torch.randn(inputs.shape[0], inputs.shape[1])).type(torch.int32)
+# odd_input = (inputs + torch.randn(inputs.shape[0], inputs.shape[1])).type(torch.int32)
 
-odd_dataset = CreateDataset(odd_input)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
+#odd_dataset = CreateDataset(odd_input)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
 
-odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
- """
+#odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
+"""
 
 #odd_input = torchdrift.data.functional.gaussian_noise(inputs, severity= ) 
 
-
-feature_extractor = copy.deepcopy(model)
+"""
+feature_extractor = copy.deepcopy(DeepFMModel)
 
 class model(nn.Module):
     def __init__(self, basemodel):
@@ -177,7 +184,7 @@ auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
 import matplotlib.pyplot as plt
 plt.plot(fp, tp)
 
-plt.show()
+plt.show() """
 
 
 
@@ -206,15 +213,19 @@ with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input
         number_uniques_dict = pickle.load(input_file)
 
 
-batch_size = 128
-embedding_dim = 26
-dropout=0.2677
+with open('config/experiment/exp1.yaml') as f:
+    hparams = yaml.load(f, Loader=SafeLoader)
+#batch_size = 128
+#embedding_dim = 38
+#dropout=0.4931
 device = 'cpu'
-path = 'Models/DeepFM_model_Final.pth'
-model = DeepFactorizationMachineModel(field_dims = valid_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
+#hparams = 
+path = 'Models/DeepFM_modelV2.pth'
+#DeepFMModel = DeepFactorizationMachineModel(field_dims = valid_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
 
-model.load_state_dict(torch.load(path))
+DeepFMModel = torch.load(path)
 
+#DeepFMModel.load_state_dict(torch.load(path))
 
 
 
@@ -234,7 +245,7 @@ odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, n
 #odd_input = torchdrift.data.functional.gaussian_noise(inputs, severity= ) 
 
 
-feature_extractor = copy.deepcopy(model)
+feature_extractor = copy.deepcopy(DeepFMModel)
 
 class model(nn.Module):
     def __init__(self, basemodel):
@@ -263,19 +274,9 @@ auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
 
 
 
+print(auc)
+print(fp)
+print(tp)
 
 
 
-
-
-
-#x, y = next(iter(datamodule.val_dataloader()))
-ood_ratio = 0.8
-sample_size = 5
-experiment = torchdrift.utils.DriftDetectionExperiment(detector, newmodel, ood_ratio=ood_ratio, sample_size=sample_size)
-experiment.post_training(datamodule.val_dataloader())
-auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
-import matplotlib.pyplot as plt
-plt.plot(fp, tp)
-
-plt.show()
