@@ -65,8 +65,6 @@ def main():
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
-    dropout=hparams["dropout"]
-    embedding_dim = hparams["embed_dim"]
     DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
@@ -142,7 +140,6 @@ def main():
             outputs, loss_output = DeepFMModel(X_valid)
             loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
-            predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             running_loss_val += loss_val
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
@@ -168,8 +165,6 @@ def main():
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
-    print("Training accuracy list is: ", Train_Acc_list)
-    print("Validation accuracy list is: ", Val_acc_list)
     print("running time is: ",res)
 if __name__ == '__main__':
     main()

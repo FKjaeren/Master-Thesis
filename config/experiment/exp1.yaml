@@ -8,8 +8,8 @@ embed_dim: 38
 dropout: 0.4931
 pos_weight: "data_scale"
 batch_size: 128
-fm_weight: 0.9347
-mlp_weight: 1.66
+fm_weight: 0.360234#0.9347
+mlp_weight: 0.639766#1.66
 num_epochs: 4
 model_path: "Models/DeepFM_modelV3.pth"
 

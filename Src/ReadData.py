@@ -20,17 +20,16 @@ class CreateDataset(Dataset):
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-
 def ReadData(product, customer, features, batch_size, Subset = False):
     prod_features= copy.deepcopy(features)
     customer_features = copy.deepcopy(features)
     customer_features.insert(0, customer)
     prod_features.insert(0, product)
     if(Subset == True):
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features][0:150000]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features][0:150000]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv', nrows= 100000)[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv', nrows = 100000)[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -45,10 +44,10 @@ def ReadData(product, customer, features, batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
     else:
-        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts.csv')[prod_features]
+        UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame.csv')[customer_features]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame.csv')[prod_features]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv')[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -63,7 +62,7 @@ def ReadData(product, customer, features, batch_size, Subset = False):
         valid_product = Product_Preprocessed_data.iloc[splitrange+1:splitrange2]
         test_product = Product_Preprocessed_data.iloc[splitrange2:]
 
-    with open(r"Data/Preprocessed/number_uniques_dict.pickle", "rb") as input_file:
+    with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
 
     #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
