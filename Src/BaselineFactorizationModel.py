@@ -92,7 +92,7 @@ model.compile(loss= tf.keras.losses.CategoricalCrossentropy(from_logits=True),
             optimizer=tf.keras.optimizers.SGD(learning_rate = 0.001), 
             metrics=[tf.keras.metrics.CategoricalAccuracy()])
 
-model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =5, verbose=0)
+model.fit(get_dataset(train_sub, articles_raw, 10), validation_data = get_dataset(valid_sub, articles_raw, 10), epochs =5, verbose=1)
 
 # Path
 path = 'Models/test_baseline_model_with_tf_function2'
