@@ -1,9 +1,8 @@
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 #from Src.BaselineFactorizationModel import SimpleRecommender
-from torch.utils.data import Dataset, TensorDataset
+from torch.utils.data import Dataset
 import copy
 import torch
 import pickle
@@ -22,7 +21,7 @@ class CreateDataset(Dataset):
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-batch_size = 256
+batch_size = 1
 
 product='article_id'
 customer='customer_id'
@@ -61,7 +60,7 @@ with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input
 
 #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
 Product_data_tensor = torch.tensor(UniqueProducts_df.fillna(0).to_numpy(), dtype = torch.int)
-)
+
 product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
 
 customer_test_tensor = torch.tensor(test_customer.fillna(0).to_numpy(), dtype = torch.int)
@@ -90,11 +89,12 @@ twelve_accuracy_all = []
 for c in customers:
     temp_accuracy = []
     transaction_indexes = test_customer.index[test_customer["customer_id"] == c]
-    test_df_temp = test_customer.loc[transaction_indexes][0]
+    test_df_temp = test_customer.loc[transaction_indexes].iloc[0]
     true_values = test_product.loc[transaction_indexes].article_id.unique()
-
-    output_matrix = model(test_df_temp)
-    recommendations, indexes = torch.topk(output_matrix)
+    test_df_tensor = torch.tensor(test_df_temp.fillna(0).to_numpy(), dtype = torch.int).unsqueeze(dim = 0)
+    output_matrix = model(test_df_tensor,None)
+    recommendations, indexes = torch.topk(output_matrix,k)
+    indexes = indexes.squeeze()
     recommendations = UniqueProducts_df.loc[indexes]['article_id']
     if any(x in recommendations for x in true_values):
         accuracy = 1.0
@@ -120,5 +120,6 @@ twelve_accuracy_all = sum(twelve_accuracy_all)/len(customers)
 
 
 
-print("The accuracy at hitting one correct recommendation is: ",one_accuracy_all, "%")
-print("The accuracy at hitting 12 accurate recommendations is ",twelve_accuracy_all,"%")
+print("The accuracy at hitting one correct recommendation is: ",one_accuracy_all*100, "%")
+print("The accuracy at hitting 12 accurate recommendations is ",twelve_accuracy_all*100,"%")
+print(f"The model was tested on {len(customers)} users")

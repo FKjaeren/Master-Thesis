@@ -76,5 +76,5 @@ twelve_accuracy_all = sum(twelve_accuracy_all)/len(customers)
 
 
 
-print("The accuracy at hitting one correct recommendation is: ",one_accuracy_all, "%")
-print("The accuracy at hitting 12 accurate recommendations is ",twelve_accuracy_all,"%")
+print("The accuracy at hitting one correct recommendation is: ",one_accuracy_all*100, "%")
+print("The accuracy at hitting 12 accurate recommendations is ",twelve_accuracy_all*100,"%")

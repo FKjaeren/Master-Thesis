@@ -255,7 +255,7 @@ model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=bat
 optimizer = torch.optim.Adam(model.parameters(), weight_decay=0.0001, lr = 0.001)
 model =model.to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-num_epochs = 1
+num_epochs = 2
 
 
 #Num_classes = len(Product_data['product_id'])
@@ -264,7 +264,7 @@ dataset = next(dataiter)
 
 #prof = torch.profiler.profile(
 #        schedule=torch.profiler.schedule(wait=0, warmup=0, active=3, repeat=2),
-#        on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/BaselineModel'),
+#        on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/Baselinemodel'),
 #        record_shapes=True,
 #        with_stack=True)
 #prof.start()
@@ -294,7 +294,8 @@ for epoch in range(1,num_epochs+1):
         outputs = model(customer_data_batch, product_data_batch)
         output = torch.squeeze(outputs, 1)
         # Compute the loss and its gradients
-        loss = loss_fn(output,product_id.to(device))
+        product_id_one_hot = F.one_hot(product_id,num_classes = (number_uniques_dict["n_products"]-1))
+        loss = loss_fn(output,product_id_one_hot.type(torch.FloatTensor).to(device))
         loss.backward()
 
         # Adjust learning weights
@@ -302,7 +303,7 @@ for epoch in range(1,num_epochs+1):
 
             # Gather data and report
         epoch_loss.append(loss.item())
-        if(i % 10 == 0):
+        if(i % 100 == 0):
             print(' Train batch {} loss: {}'.format(i, np.mean(epoch_loss)))
         
         epoch_loss.append(loss.item())
@@ -314,18 +315,20 @@ for epoch in range(1,num_epochs+1):
         product_id = product_data_batch_valid[:,0].type(torch.long)
         outputs = model(customer_data_batch_valid, product_data_batch_valid)
         output = torch.squeeze(outputs, 1)
-        loss = loss_fn(output,product_id)
+        product_id_one_hot = F.one_hot(product_id,num_classes = (number_uniques_dict["n_products"]-1))
+        loss = loss_fn(output,product_id_one_hot.type(torch.FloatTensor).to(device))
         epoch_valid_loss.append(loss.item())
-        if(batch % 10 == 0):
+        if(batch % 100 == 0):
             print(' Valid batch {} loss: {}'.format(batch, np.mean(epoch_valid_loss)))
     epoch_valid_loss_value = np.mean(epoch_valid_loss)
     Valid_Loss_list.append(epoch_valid_loss_value)
     if(epoch_valid_loss_value < Best_loss):
         best_model = copy.deepcopy(model)
         Best_loss = epoch_valid_loss_value
-#torch.save(model.state_dict(), 'Models/Baseline_MulitDim_model.pth')
 PATH = 'Models/Baseline_MulitDim_model.pth'
-torch.save(best_model, PATH)
+#torch.save(best_model, PATH)
+torch.save(model.state_dict(), PATH)
+
 
 #prof.stop()
 

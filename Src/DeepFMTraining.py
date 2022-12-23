@@ -166,5 +166,6 @@ def main():
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
     print("running time is: ",res)
+    print(f"With the weight combo: FM: {hparams['fm_weight']} and MLP: {hparams['mlp_weight']}")
 if __name__ == '__main__':
     main()

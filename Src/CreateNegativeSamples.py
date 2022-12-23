@@ -108,6 +108,9 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
         negative_df['month'] = today.month
         #negative_df['year'] = np.random.randint(0, transactions_df.year.unique().max(), negative_df.shape[0])
         negative_df['year'] = today.year
+        with open(r'Models/Year_Encoder_subset.sav', "rb") as input_file:
+            Year_Encoder = pickle.load(input_file)
+        negative_df['year'] = Year_Encoder.transform(negative_df[['year']].to_numpy().reshape(-1,1))
 
         negative_df.loc[(negative_df['month']>= 1) & (negative_df['month'] <=2), 'season'] = 'Winter'
 

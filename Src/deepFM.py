@@ -66,7 +66,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         embed_x = self.embedding(x)
 
-        x = ((self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"]) + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
+        x = (self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"] + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
 
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
