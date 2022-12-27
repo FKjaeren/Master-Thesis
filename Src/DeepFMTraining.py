@@ -17,6 +17,7 @@ from deepFM import DeepFactorizationMachineModel
 # Open the file and load the file
 with open('config/experiment/exp1.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
+print(f"model is trained with following parameters {hparams}")
 def main():
 
     class CreateDataset(Dataset):

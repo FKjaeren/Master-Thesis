@@ -16,6 +16,8 @@ test_sub = test[['customer_id','article_id']]
 customers = test_sub.customer_id.unique()[0:12000]
 customers_encoded = test_df_encoded.customer_id.unique()[0:12000]
 
+test_df_sub = test_df_encoded[test_df_encoded["customer_id"].isin(customers_encoded)]
+
 
 final_idx = test_sub.index[test_sub['customer_id'].isin(customers)].tolist()
 final_idx_encoded = test_df_encoded.index[test_df_encoded['customer_id'].isin(customers_encoded)].tolist()
@@ -30,3 +32,12 @@ a_neg = sum(article in articles_encoded for article in train_articles_with_negat
 print(f"Number of customers in the test set that were also in the trainingset is: {c}. Therefore there are {12000-c}, cold start cases in regards to customers.")
 print(f"Number of articles in the test set that were also in the trainingset is: {a}. Therefore there are {len(articles)-a}, cold start cases in regards to customers.")
 print(f"Number of articles in the test set that were also in the trainingset included the negative samples of random articles is: {a_neg}. Therefore there are {len(articles)-a_neg}, cold start cases in regards to customers.")
+
+test_df_sub = test_df_encoded[test_df_encoded["customer_id"].isin(customers_encoded)]
+
+customer_transaction_analysis = test_df_sub[['customer_id','article_id']].groupby('customer_id').count()
+avg_transactions_made = customer_transaction_analysis.mean()
+max_transactions_made = customer_transaction_analysis.max()
+min_transactions_made = customer_transaction_analysis.min()
+median_transactions_made = customer_transaction_analysis.median()
+

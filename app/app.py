@@ -108,8 +108,12 @@ def make_prediction(customer_data, article_data, train_df, article_data_raw, num
 
 st.title("Make a customer recommendation")
 
+st.text('Loading Data')
+
+customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, state_dict = load_data(storage_client)
+
 customer_input = st.number_input(
-    "Enter a customer id 👇 such as: 95084",
+    "Enter a customer id 👇 such as: 299185",
     #label_visibility=st.session_state.visibility,
     #disabled=st.session_state.disabled,
     #placeholder=st.session_state.placeholder,
@@ -123,8 +127,8 @@ Amount_input = st.number_input(
 
 customer_input = int(customer_input)
 Amount_input = int(Amount_input)
-
-customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, state_dict = load_data(storage_client)
+if (customer_data.empty==False):
+    st.text('Data have been loaded :) ')
 
 if (customer_input and Amount_input):
     data_load_state = st.text('Making Recommendation')

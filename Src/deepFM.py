@@ -6,14 +6,7 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
-import yaml
-from yaml.loader import SafeLoader
-
-# Open the file and load the file
-with open('config/experiment/exp1.yaml') as f:
-    hparams = yaml.load(f, Loader=SafeLoader)
-
+from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
         self.chunksize = chunkSize
@@ -59,6 +52,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims, n_unique_dict=n_unique_dict, device = device)
         self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
+        self.hparams = hparams
 
     def forward(self, x):
         """
@@ -66,8 +60,9 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         """
         embed_x = self.embedding(x)
 
-        x = (self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))*hparams["fm_weight"] + (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
-
+        x_fm = (self.linear(embed_x.view(-1, self.embed_output_dim)).unsqueeze(dim=1)+self.fm(embed_x))
+        x_mlp = self.mlp(embed_x.view(-1, self.embed_output_dim))
+        x = x_fm*self.hparams["fm_weight"] + x_mlp*self.hparams["mlp_weight"]
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):
         item_idx = torch.topk(x,k)
