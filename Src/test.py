@@ -23,9 +23,8 @@ else:
 twelve_accuracy_all.append(temp_accuracy_final)
 
 #DeepFM
-value_1 = 58758.57/12000
-value_2 = 59099.06/12000
-value_3 = 54929.98/12000
+value_1 = 33157.21/12000
+value_2 = 36477.17/12000
 
 #FM 
 value_2 = 10345.90/12000
@@ -37,11 +36,11 @@ value_2 = 440.30/12000
 value_3 = 456.94/12000
 
 # MLP
-value_1 = 14291.31/12000
-value_2 = 15155.48/12000
+value_1 = 14459.32/12000
+value_2 = 14277.88/12000
 
-values = [value_1,value_2,value_3]
-#values = [value_1, value_2]
+#values = [value_1,value_2,value_3]
+values = [value_1, value_2]
 np.mean(values)
 np.std(values)
 
