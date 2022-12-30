@@ -35,9 +35,9 @@ def main():
 
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
-    train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
+    #train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
-    valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
+    #valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -103,6 +103,7 @@ def main():
         running_loss = 0.
         running_loss_val = 0.
         epoch_loss = []
+        epoch_acc = []
         FMModel.train()
 
         for batch, (X,y) in enumerate(train_loader):
@@ -127,15 +128,12 @@ def main():
                 # Gather data and report
             epoch_loss.append(loss.item())
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
-            Train_acc = (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100
+            Train_acc = (1-abs(torch.sum(y.squeeze() - predictions).item())/len(y))*100
             Train_Acc_list.append(Train_acc)
-            if(batch % 500 == 0):
-                print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
+            #if(batch % 500 == 0):
+            #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
         if(epoch % 1 == 0):
             print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
-
-            epoch_loss.append(loss.item())
-
 
         epoch_loss_value = np.mean(epoch_loss)
         Loss_list.append(epoch_loss_value)
@@ -146,7 +144,8 @@ def main():
             loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
-            Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
+            predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
+            Val_acc = (1-abs(torch.sum(y_valid.squeeze() - predictions).item())/len(y_valid))*100
             Val_acc_list.append(Val_acc)
 
         if(epoch % 1 == 0):
@@ -168,6 +167,5 @@ def main():
     print("Loss list = ", Loss_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
-    print("Val Acc list: ", Val_acc_list)
 if __name__ == '__main__':
     main()

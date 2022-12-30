@@ -35,32 +35,25 @@ def main():
             return shape_value
 
 
-    train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
-    train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
-    valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
-    valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
-    test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
+    train_df = pd.read_csv('Data/Preprocessed/train_df_subset_50Neg.csv')
+    #train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
+    valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset_50Neg.csv')
+    #valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_tensor = torch.tensor(train_df.fillna(0).to_numpy(), dtype = torch.int)    
     valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
-    test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
 
     train_dataset = CreateDataset(train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-    test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
 
     batch_size = hparams["batch_size"]
-
-    #dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
-
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = batch_size, num_workers = 0, shuffle = False, drop_last = True)
 
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
@@ -69,6 +62,7 @@ def main():
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
         pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
+        #neg_weight = train_df.target.value_counts()[1] / train_df.target.value_counts()[0]
     else:
         pos_weight = hparams["pow_weight"]
 
@@ -104,6 +98,7 @@ def main():
         running_loss = 0.
         running_loss_val = 0.
         epoch_loss = []
+        Train_acc_list_epoch = []
         DeepFMModel.train()
 
         for batch, (X,y) in enumerate(train_loader):
@@ -122,34 +117,38 @@ def main():
                 # Gather data and report
             epoch_loss.append(loss.item())
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
-            Train_acc = (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100
-            Train_Acc_list.append(Train_acc)
+            Train_acc = (1-abs(torch.sum(y.squeeze() - predictions).item())/len(y))*100
+            Train_acc_list_epoch.append(Train_acc)
             #if(batch % 500 == 0):
             #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
         if(epoch % 1 == 0):
             print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
-
+            print(' Train epoch {} accuracy: {}'.format(epoch, np.mean(Train_acc_list_epoch)))
             epoch_loss.append(loss.item())
 
 
         epoch_loss_value = np.mean(epoch_loss)
         Loss_list.append(epoch_loss_value)
+        Train_Acc_list.append(np.mean(Train_acc_list_epoch))
         DeepFMModel.eval()
         epoch_valid_loss = []
+        Val_acc_list_epoch = []
         for batch, (X_valid,y_valid) in enumerate(valid_loader):
             outputs, loss_output = DeepFMModel(X_valid)
             loss_val = loss_fn_val(loss_output,y_valid.squeeze())
             epoch_valid_loss.append(loss_val.item())
             running_loss_val += loss_val
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
-            Val_acc = (1-abs(torch.sum(y_valid.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y_valid))*100
-            Val_acc_list.append(Val_acc)
+            Val_acc = (1-abs(torch.sum(y_valid.squeeze() - predictions).item())/len(y_valid))*100
+            Val_acc_list_epoch.append(Val_acc)
 
         if(epoch % 1 == 0):
             print(' Valid epoch {} loss: {}'.format(epoch, np.mean(epoch_valid_loss)))
+            print(' Valid epoch {} accuracy: {}'.format(epoch, np.mean(Val_acc_list_epoch)))
 
         epoch_valid_loss_value = np.mean(epoch_valid_loss)
         Valid_Loss_list.append(epoch_valid_loss_value)
+        Val_acc_list.append(np.mean(Val_acc_list_epoch))
         if(epoch_valid_loss_value < Best_loss):
             best_model = copy.deepcopy(DeepFMModel)
             Best_loss = epoch_valid_loss_value
@@ -163,10 +162,11 @@ def main():
 
     print("finished training")
     print("Loss list = ", Loss_list)
+    print("Valid loss list = ", Valid_Loss_list)
+    print("Train Acc list = ", Train_Acc_list)
+    print("Valid Acc list = ", Val_acc_list)
     print("Training accuracy is: ", (sum(Train_Acc_list)/len(Train_Acc_list)))
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
-    print("Training accuracy list is: ", Train_Acc_list)
-    print("Validation accuracy list is: ", Val_acc_list)
     print("running time is: ",res)
 if __name__ == '__main__':
     main()

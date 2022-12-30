@@ -6,13 +6,9 @@ from torch.utils.data import Dataset
 from torch import nn
 import pickle
 import copy
-from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
+from Src.Layers import FeaturesEmbedding, MultiLayerPerceptron
 import yaml
 from yaml.loader import SafeLoader
-
-# Open the file and load the file
-with open('config/experiment/Train_MLP.yaml') as f:
-    hparams = yaml.load(f, Loader=SafeLoader)
 
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
@@ -50,23 +46,17 @@ class MultiLayerPerceptronArchitecture(torch.nn.Module):
     Reference:
     H Guo, et al. DeepFM: A Factorization-Machine based Neural Network for CTR Prediction, 2017.
     """
-
     def __init__(self, field_dims, hparams, n_unique_dict, device):
         super().__init__()
         mlp_dims = [hparams["latent_dim1"],hparams["latent_dim2"],hparams["latent_dim3"]]
-        self.linear = LinearLayer()
-        self.fm = FactorizationMachine(reduce_sum=True)
         self.embedding = FeaturesEmbedding(embedding_dim = hparams["embed_dim"],num_fields=field_dims, n_unique_dict=n_unique_dict, device = device)
         self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
-
+        self.hparams = hparams
     def forward(self, x):
-        """
-        :param x: Long tensor of size ``(batch_size, num_fields)``
-        """
         embed_x = self.embedding(x)
 
-        x = (self.mlp(embed_x.view(-1, self.embed_output_dim))*hparams["mlp_weight"])
+        x = (self.mlp(embed_x.view(-1, self.embed_output_dim))*self.hparams["mlp_weight"])
 
         return torch.sigmoid(x.squeeze(1)), x.squeeze(1)
     def Reccomend_topk(x, k):

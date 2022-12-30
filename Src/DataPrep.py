@@ -117,6 +117,7 @@ transactions_df_original = pd.read_csv(data_path+'transactions_train_subset.csv'
 transactions_df = copy.deepcopy(transactions_df_original)
 
 transactions_df = transactions_df[transactions_df['t_dat']>'2019-09-21']
+#transactions_df = transactions_df[transactions_df['t_dat']>'2020-06-22']
 
 #transactions_df = transactions_df.iloc[-300000:].reset_index().drop(['index'],axis = 1)
 
@@ -125,6 +126,7 @@ target = pd.DataFrame(ones_data, columns=['targets'])
 
 #transactions_df = pd.concat([transactions_df,target], axis = 1)
 transactions_df['target'] = target['targets']
+transactions_df['target'] = 1
 #datetime and create a day, month and year column
 transactions_df.t_dat = pd.to_datetime(transactions_df.t_dat)
 
@@ -286,7 +288,7 @@ def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10
 
         train.to_csv('Data/Preprocessed/train_df_subset.csv', index = False)
         valid.to_csv('Data/Preprocessed/valid_df_subset.csv', index=False)
-        test.to_csv('Data/Preprocessed/test_df_subset.csv', index = False)
+        test.to_csv('Data/Preprocessed/test_df.csv', index = False)
         #test_with_negative.to_csv('Data/Preprocessed/test_with_negative_subset.csv', index = False)
         print('Dataframes for a Factorization Machine model have been saved')
 
@@ -396,5 +398,5 @@ def GetPreprocessedDF(transactions_df = transactions_df, n_negative_samples = 10
 
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'FM'" to get dataframes for a Factorization machine model.
 ## Call the "GetPreprocessedDF" function with parameter: "method == 'MF'" to get dataframes for a Matrix Factorization model.
-num_negative_samples = 20
-GetPreprocessedDF(transactions_df,n_negative_samples=num_negative_samples, Method = 'MF')
+num_negative_samples = 50
+GetPreprocessedDF(transactions_df,n_negative_samples=num_negative_samples, Method = 'FM')

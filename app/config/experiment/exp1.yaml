@@ -1,15 +1,18 @@
-weight_decay: 0.003704
-lr: 0.002159
+weight_decay: 0.0001
+lr: 0.001
 cuda: False
-latent_dim1: 16
-latent_dim2: 35
-latent_dim3: 40
-embed_dim: 38
-dropout: 0.4931
+latent_dim1: None
+latent_dim2: None
+latent_dim3: None
+embed_dim: 32
+dropout: None
 pos_weight: "data_scale"
 batch_size: 128
-fm_weight: 0.360234
-mlp_weight: 0.639766
+fm_weight: 1
+mlp_weight: 0
 num_epochs: 4
-model_path: "Models/DeepFM_modelV3.pth"
+model_path: "Models/FM_modelV1.pth"
+device: "cpu"
+model: "FM"
+
 

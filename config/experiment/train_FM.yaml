@@ -11,6 +11,8 @@ batch_size: 128
 fm_weight: 1
 mlp_weight: 0
 num_epochs: 4
-model_path: "Models/FM_modelV2.pth"
+model_path: "Models/FM_modelV1.pth"
+device: "cpu"
+model: "FM"
 
 

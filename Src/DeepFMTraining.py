@@ -15,7 +15,7 @@ from yaml.loader import SafeLoader
 from deepFM import DeepFactorizationMachineModel
 
 # Open the file and load the file
-with open('config/experiment/exp1.yaml') as f:
+with open('config/experiment/Train_DeepFM.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 print(f"model is trained with following parameters {hparams}")
 def main():
@@ -123,7 +123,7 @@ def main():
                 # Gather data and report
             epoch_loss.append(loss.item())
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
-            Train_acc = (1-abs(torch.sum(y.squeeze() - torch.tensor(predictions, dtype = torch.int)).item())/len(y))*100
+            Train_acc = (1-abs(torch.sum(y.squeeze() - predictions).item())/len(y))*100
             Train_Acc_list.append(Train_acc)
             #if(batch % 500 == 0):
             #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
@@ -168,5 +168,6 @@ def main():
     print("Validation accuracy is: ", (sum(Val_acc_list)/len(Val_acc_list)))
     print("running time is: ",res)
     print(f"With the weight combo: FM: {hparams['fm_weight']} and MLP: {hparams['mlp_weight']}")
+    print(f"This test was performed with the model :{DeepFMModel}")
 if __name__ == '__main__':
     main()

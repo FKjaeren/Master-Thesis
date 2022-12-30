@@ -49,9 +49,6 @@ class FeaturesEmbedding(torch.nn.Module):
         return customer_embedding_final
 
 class MultiLayerPerceptron(torch.nn.Module):
-    """
-    Class to instantiate a Multilayer Perceptron model
-    """
 
     def __init__(self, input_dim, embed_dims, dropout, output_layer=True):
         super().__init__()
@@ -67,28 +64,17 @@ class MultiLayerPerceptron(torch.nn.Module):
         self.mlp = torch.nn.Sequential(*layers)
 
     def forward(self, x):
-        """
-        :param x: Float tensor of size ``(batch_size, num_fields, embed_dim)``
-        """
         return self.mlp(x)
 
 
 
 class FactorizationMachine(torch.nn.Module):
-    """
-        Class to instantiate a Factorization Machine model
-    """
 
     def __init__(self, reduce_sum=True):
         super().__init__()
         self.reduce_sum = reduce_sum
 
     def forward(self, x):
-        """
-        :param x: Float tensor of size ``(batch_size, num_fields, embed_dim)``
-
-
-        """
         square_of_sum = torch.sum(x, dim=1) ** 2
         sum_of_square = torch.sum(x ** 2, dim=1)
         ix = square_of_sum - sum_of_square

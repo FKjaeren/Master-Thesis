@@ -1,5 +1,5 @@
-weight_decay: 0.003704
-lr: 0.002159
+weight_decay: 0.05
+lr: 0.001
 cuda: False
 latent_dim1: 16
 latent_dim2: 35
@@ -11,5 +11,6 @@ batch_size: 128
 fm_weight: 0
 mlp_weight: 1
 num_epochs: 4
-model_path: "Models/MLP_model.pth"
-
+model_path: "Models/MLP_model_V2.pth"
+device: "cpu"
+model: "MLP"

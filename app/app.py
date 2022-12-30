@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import torch
 #from Create_recommendations import Get_Recommendations
-from deepFM import DeepFactorizationMachineModel
+from FMModel import FactorizationMachineModel
 from CreateRecommendationData import load_recommendation_data
 import pickle
 import os
@@ -24,7 +24,7 @@ storage_client = storage.Client()
 
 #@st.cache
 def load_data(storage_client):
-    DeepFM_model_blob_name = "DeepFM_model_Final.pth"
+    DeepFM_model_blob_name = "Best_Model.pth"
     Article_Id_Encoder_blob_name = "Article_Id_Encoder_subset.sav"
     #test_df_subset_blob_name = "test_df_subset_final.csv"
     number_uniques_dict_blob_name = "number_uniques_dict_subset.pickle"
@@ -80,7 +80,7 @@ def load_data(storage_client):
 #@st.cache
 def make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, state_dict):
 
-    model = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
+    model = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
 
     model.load_state_dict(state_dict)
 
@@ -88,7 +88,7 @@ def make_prediction(customer_data, article_data, train_df, article_data_raw, num
     _, full_data = load_recommendation_data(customer_input, None, customer_data, article_data, batch_size=batch_size, train_df=train_df)
 
     data_without_target = full_data[:,:20]
-    outputs,_ = model(data_without_target)
+    outputs_sigmoid,outputs = model(data_without_target)
     outputs = outputs.detach()
     conf, idx = torch.topk(outputs, Amount_input)
 
@@ -127,12 +127,13 @@ Amount_input = st.number_input(
 
 customer_input = int(customer_input)
 Amount_input = int(Amount_input)
-if (customer_data.empty==False):
+if not (customer_data.empty):
     st.text('Data have been loaded :) ')
 
 if (customer_input and Amount_input):
     data_load_state = st.text('Making Recommendation')
     product_names, product_colors, conf = make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input,state_dict)
 
-    st.text(f'The {str(Amount_input)} recommendations is product: {product_names} in color: {product_colors}')
-    st.text(f'with confidence {str(conf.numpy())} %')
+    st.text(f'The {str(Amount_input)} recommended products are: {product_names}')
+    st.text(f'The colour of these products will be: {product_colors}')
+    #st.text(f'with confidence {str(conf.numpy()*100)} %')

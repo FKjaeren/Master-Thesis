@@ -25,10 +25,13 @@ twelve_accuracy_all.append(temp_accuracy_final)
 #DeepFM
 value_1 = 33157.21/12000
 value_2 = 36477.17/12000
+value_3 = 32837.07/12000
 
 #FM 
 value_2 = 10345.90/12000
 value_1 = 10287.15/12000
+value_3 = 0.7868592017690341
+value_4 = 0.7745043141841889
 
 #Baseline
 value_1 = 457.65/12000
@@ -38,9 +41,27 @@ value_3 = 456.94/12000
 # MLP
 value_1 = 14459.32/12000
 value_2 = 14277.88/12000
+value_3 = 1.1367792414228122
+value_4 = 1.1522578936616579
+
+# MF multi dim
+value_1 = 1016.06/12000
+value_2 = 1072.99/12000
+value_3 = 0.08169
+value_4 = 0.08002
+
+value_1 = 487.480064609468/12000
+
+#Use model for prediction time:
+value_1 = 86.53
+value_2 = 85.86
+
+## Use model for prediciton time Local:
+value_1 = 19.17
+value_2 = 20.19
 
 #values = [value_1,value_2,value_3]
-values = [value_1, value_2]
+values = [value_3, value_4]
 np.mean(values)
 np.std(values)
 
