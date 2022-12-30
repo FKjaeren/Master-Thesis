@@ -6,7 +6,7 @@ https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations
 
 The data should be stored in a subfolder called "Raw" inside of the folder "Data", which lies within the main file of the repository called "Master-Thesis".
 
-In order to reproduce the results presented in the thesis one should:
+In order to reproduce the results presented in the thesis one should (when running the script open a terminal in the "MasterThesis" Folder and run "python Src/scriptname"):
 
 1.  Run "FindRelevantCustomersItems.py" to find the most relevant records in the raw datasets. This will create raw datasets call  "'Name_of_dataset'_subset.csv".
 2.  Run "DataPrep.py". This will do all the necessary preprocing of the data. Creating files in a subfolder in "Data" called "Preprocessed".
