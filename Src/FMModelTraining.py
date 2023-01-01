@@ -8,7 +8,6 @@ import pickle
 import copy
 import logging
 import time
-# import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
 from FMModel import FactorizationMachineModel
