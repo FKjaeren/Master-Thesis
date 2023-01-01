@@ -55,6 +55,8 @@ batch_size = 128
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
 
+
+# Make recommendations for the customer input using the given model
 def make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, data):
     device = "cpu"
     model = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)

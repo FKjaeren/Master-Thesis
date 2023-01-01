@@ -9,7 +9,6 @@ import copy
 from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import logging
 import time
-# import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
 from deepFM import DeepFactorizationMachineModel
@@ -18,8 +17,9 @@ from deepFM import DeepFactorizationMachineModel
 with open('config/experiment/Train_DeepFM.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 print(f"model is trained with following parameters {hparams}")
+# Train the DeepFM model
 def main():
-
+    # Load data
     class CreateDataset(Dataset):
         def __init__(self, dataset):#, features, idx_variable):
 
@@ -54,8 +54,6 @@ def main():
 
     batch_size = hparams["batch_size"]
 
-    #dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
-
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
@@ -65,7 +63,8 @@ def main():
 
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
-
+    
+    # Initialize model, optimizer and loss function
     DeepFMModel = DeepFactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
@@ -74,23 +73,22 @@ def main():
         pos_weight = hparams["pow_weight"]
 
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
-    #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
 
+    # Initialized weights
     def init_weights(m):
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
-            #m.weight.data.fill_(0.0)
             m.bias.data.fill_(0.01)
         elif isinstance(m, nn.Embedding):
             m.weight.data.normal_(mean=0.0, std=1.0)
-            #m.weight.data.fill_(0.0)
             if m.padding_idx is not None:
                 m.weight.data[m.padding_idx].zero_()        
 
 
     DeepFMModel.apply(init_weights)
 
+    # Training loop
     num_epochs = hparams["num_epochs"]
     res = []
     Loss_list = []
@@ -125,8 +123,7 @@ def main():
             predictions = outputs.detach().apply_(lambda x: 1 if x > 0.5 else 0)
             Train_acc = (1-abs(torch.sum(y.squeeze() - predictions).item())/len(y))*100
             Train_Acc_list.append(Train_acc)
-            #if(batch % 500 == 0):
-            #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
+            
         if(epoch % 1 == 0):
             print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
 
@@ -160,7 +157,6 @@ def main():
     res = np.array(res)
     PATH = hparams["model_path"]
     torch.save(best_model.state_dict(), PATH)
-    #torch.save(best_model, PATH)
 
     print("finished training")
     print("Loss list = ", Loss_list)

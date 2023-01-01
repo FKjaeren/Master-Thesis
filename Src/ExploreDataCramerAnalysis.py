@@ -6,6 +6,8 @@ from sklearn import preprocessing
 import copy
 import math 
 
+# Preparation of all data variables for testing assosiation between variables
+
 
 customers = pd.read_csv('Data/Raw/customers_subset.csv')
 
@@ -210,6 +212,8 @@ train = train.merge(customers, how = 'left', on ='customer_id')
 
 
 
+
+
 from scipy.stats import chi2_contingency
 
 train_sub = train.drop(['customer_id'], axis = 1).iloc[-1450000:].reset_index().drop(['index'],axis = 1)
@@ -221,9 +225,10 @@ train_sub = train_sub.drop(['article_id','postal_code','product_type_no','graphi
                             'index_code','index_group_no','section_no','garment_group_no','colour_group_code','product_code', 'day', 'month', 'year'], axis = 1)
 
 
-
+# W keep day, month year and season 
 train_sub = train_sub.drop(['day', 'month', 'year'], axis = 1)
 
+# Some inspiration for the code is used, see appendix C, code in thesis for link.
 def cramers_V(var1,var2) :
   crosstab =np.array(pd.crosstab(var1,var2, rownames=None, colnames=None)) # Cross table building
   stat, p = chi2_contingency(crosstab)[0:2] # Keeping of the test statistic of the Chi2 test
@@ -280,9 +285,3 @@ df2[columns_list[15:]]
 #       'customer_id','article_id,'price', 'sales_channel_id', 'day', 'month', 'year', 'season', 'prod_name',
 #       'graphical_appearance_name', 'colour_group_name', 'club_member_status',
 #       'fashion_news_frequency', 'age', postal_code
-
-#valid = valid.merge(articles_df, on = 'article_id', how = 'left')
-#valid = valid.merge(customers, how = 'left', on ='customer_id')
-
-#test = test.merge(articles_df, on = 'article_id', how = 'left')
-#test = test.merge(customers, how = 'left', on ='customer_id')

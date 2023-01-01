@@ -9,10 +9,11 @@ import pickle
 import os
 from google.cloud import storage
 import io
-
-
 import yaml
 from yaml.loader import SafeLoader
+
+# Experiment for time to load data in GCP
+
 data = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 with open('config/experiment/exp1.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)

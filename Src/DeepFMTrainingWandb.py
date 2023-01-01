@@ -14,6 +14,7 @@ import time
 import torch
 from deepFM import DeepFactorizationMachineModel
 
+# Script for tuning hyperparameters, almost the same as DeepFM training
 
 log = logging.getLogger(__name__)
 sweep_configuration = {
