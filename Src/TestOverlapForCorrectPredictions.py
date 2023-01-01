@@ -1,5 +1,5 @@
 #Load customers where 1 correct product prediction have been made
-
+# The print statements in this script should explain what the code does.
 with open('Results/correctlypredicted_customers_with_FM.txt') as f:
     FM_customers = f.readlines()
 

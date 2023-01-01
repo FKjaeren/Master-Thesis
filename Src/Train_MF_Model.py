@@ -55,7 +55,7 @@ class RecSysModel(torch.nn.Module):
         self.batch_size = batch_size
         self.n_unique_dict = n_unique_dict
         self.n_ages = n_ages
-
+        #Define embedding layers for each feature
         self.customer_embedding = nn.Embedding(self.n_unique_dict['n_customers']+1, embedding_dim).to(device)    
         self.product_embedding = nn.Embedding(self.n_unique_dict['n_products']+1, embedding_dim).to(device)
         self.price_embedding = nn.Embedding(self.n_unique_dict['n_prices']+2, embedding_dim).to(device)
@@ -83,6 +83,7 @@ class RecSysModel(torch.nn.Module):
 
     def forward(self, Customer_data, Product_data):
         device = self.device
+        #Apply embedding layers on each article transformed feature
         All_products = self.All_Products[:,:].to(device)
         customer_embedding = self.customer_embedding(Customer_data[:,0])
         club_membership_embedding = self.club_member_status_embedding(Customer_data[:,1])
@@ -99,10 +100,12 @@ class RecSysModel(torch.nn.Module):
         graphical_embedding = self.graphical_embedding(Customer_data[:,12])
         colour_embedding = self.colour_embedding(Customer_data[:,13])
         department_embedding = self.department_embedding(Customer_data[:,14])
+        #Concattenate the embedded article features
         customer_embedding_final = torch.cat((customer_embedding, prod_name_embedding, graphical_embedding, colour_embedding, department_embedding,
                                             price_embedding, sales_channel_embedding, season_embedding, day_embedding, month_embbeding, year_embedding,
                                             age_embedding, club_membership_embedding, fashion_news_embedding, postal_code_embedding), dim = 1).to(device)
         product_embedding = self.product_embedding(All_products[:,0])
+        #Apply embedding on each customer transforemd feature
         club_membership_embedding = self.club_member_status_embedding(All_products[:,1])
         fashion_news_embedding = self.fashion_news_frequency_embedding(All_products[:,2])
         age_embedding = self.age_embedding(All_products[:,3])
@@ -117,15 +120,16 @@ class RecSysModel(torch.nn.Module):
         graphical_embedding = self.graphical_embedding(All_products[:,12])
         colour_embedding = self.colour_embedding(All_products[:,13])
         department_embedding = self.department_embedding(All_products[:,14])
-        #index_embedding = self.index_group_name_embedding(All_products[:,18])
-
+        # Concatenate the embedded customer features
         product_embedding_final = torch.cat((product_embedding, prod_name_embedding, graphical_embedding, colour_embedding, department_embedding,
                                             price_embedding, sales_channel_embedding, season_embedding, day_embedding, month_embbeding, year_embedding,
                                             age_embedding, club_membership_embedding, fashion_news_embedding, postal_code_embedding), dim = 1).to(device)
+        #Perform matrix multiplication on the two embedding tensors
         output = torch.matmul((customer_embedding_final), torch.t(product_embedding_final)).to(device)
         return output#, calc_metrics
 
     def CustomerItemRecommendation(self, Customer_data, k):
+        # Function which can be used to create recommendations for a customer
         customer_embedding = self.customer_embedding(Customer_data[:,0])
         price_embedding = self.price_embedding(Customer_data[:,1])
         age_embedding = self.age_embedding(Customer_data[:,2])
@@ -146,6 +150,7 @@ class RecSysModel(torch.nn.Module):
 
 
 # Create function for reading the two preprocessed/transformed transactiosn df datasets creating by enriching for customers and articles
+# There is a subset call if set to true then only 100000 rows of transactions are loaded.
 def ReadData(product, customer, features, batch_size, Subset = False):
     prod_features= copy.deepcopy(features)
     customer_features = copy.deepcopy(features)
@@ -154,8 +159,8 @@ def ReadData(product, customer, features, batch_size, Subset = False):
     if(Subset == True):
         UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
-        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
-        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv')[prod_features]
+        Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv', nrwos = 100000)[customer_features]
+        Product_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalProductDataFrame_subset.csv,', nrows = 100000)[prod_features]
 
         if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
             print('There is dimesion error in the data used for the feed forward (model input)')
@@ -190,6 +195,9 @@ def ReadData(product, customer, features, batch_size, Subset = False):
 
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
+
+    # For both training set, validation set and test set a customer and a product dataframe is defined. This is then converted to a tensor for later being
+    # converted to a torch dataset and then a dataloader.
 
     #Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
     Product_data_tensor = torch.tensor(UniqueProducts_df.fillna(0).to_numpy(), dtype = torch.int)
@@ -290,6 +298,7 @@ for epoch in range(1,num_epochs+1):
     Loss_list.append(epoch_loss_value)
     model.eval()
     epoch_valid_loss = []
+    # Make sure that we get the best model without adjusting the weights to the data.
     for batch, product_data_batch_valid, customer_data_batch_valid in zip(np.arange(1,dataset_shapes['valid_shape'][0]), product_valid_loader, customer_valid_loader):
         product_id = product_data_batch_valid[:,0].type(torch.long)
         outputs = model(customer_data_batch_valid, product_data_batch_valid)

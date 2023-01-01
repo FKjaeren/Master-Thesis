@@ -119,9 +119,6 @@ one_accuracy_all_final = sum(one_accuracy_all)/len(customers)
 twelve_accuracy_all_final = sum(twelve_accuracy_all)/len(customers)
 
 
-
-
-
 print("The accuracy at hitting one correct recommendation is: ",one_accuracy_all_final*100, "%")
 print("The accuracy at hitting 12 accurate recommendations is ",twelve_accuracy_all_final*100,"%")
 print(f"The model was tested on {len(customers)} users")

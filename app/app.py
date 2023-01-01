@@ -16,6 +16,7 @@ from yaml.loader import SafeLoader
 with open('config/experiment/exp1.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 
+# Configuering some GCP configurations as well as loding the key, giving us access to the service accound, which has access to data and models.
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "masterthesis-366109-0c44ff859b6e.json"
 PROJECT = "MasterThesis"
 REGION = "eu-west1"
@@ -24,6 +25,7 @@ storage_client = storage.Client()
 
 #@st.cache
 def load_data(storage_client):
+    # Function for loading the necessary data from google cloud storage.
     DeepFM_model_blob_name = "Best_Model.pth"
     Article_Id_Encoder_blob_name = "Article_Id_Encoder_subset.sav"
     #test_df_subset_blob_name = "test_df_subset_final.csv"
@@ -79,26 +81,25 @@ def load_data(storage_client):
 
 #@st.cache
 def make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, state_dict):
-
+    #Define model
     model = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
-
+    #Load trained model parameters
     model.load_state_dict(state_dict)
 
     batch_size = hparams["batch_size"]
+    # Get the data subset for only the customer id provided
     _, full_data = load_recommendation_data(customer_input, None, customer_data, article_data, batch_size=batch_size, train_df=train_df)
+    data_without_target = full_data[:,:20] # Excliding the target variable to save some space
+    outputs_sigmoid,outputs = model(data_without_target) # Get prediction scores
+    conf, idx = torch.topk(outputs.detach(), Amount_input) # Get best values
 
-    data_without_target = full_data[:,:20]
-    outputs_sigmoid,outputs = model(data_without_target)
-    outputs = outputs.detach()
-    conf, idx = torch.topk(outputs, Amount_input)
-
-    non_encoders_ids = Article_Id_Encoder.inverse_transform(idx.reshape(-1,1))
+    non_encoders_ids = Article_Id_Encoder.inverse_transform(idx.reshape(-1,1)) #decode the article id
     non_encoders_ids = non_encoders_ids.reshape(-1).astype(int)
 
 
 
 
-    products = article_data_raw[article_data_raw['article_id'].isin(non_encoders_ids)]
+    products = article_data_raw[article_data_raw['article_id'].isin(non_encoders_ids)] #Get article information such as product name from the article id.
 
     product_names = products['prod_name'].values
     product_colors = products['colour_group_name'].values
@@ -111,13 +112,14 @@ st.title("Make a customer recommendation")
 st.text('Loading Data')
 
 customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, state_dict = load_data(storage_client)
-
+# Get the customer id written in the app
 customer_input = st.number_input(
     "Enter a customer id 👇 such as: 299185",
     #label_visibility=st.session_state.visibility,
     #disabled=st.session_state.disabled,
     #placeholder=st.session_state.placeholder,
     )
+# Get amount of recommendations to be made written in the app
 Amount_input = st.number_input(
     "Enter amount of recommendations to be made 👇",
     #label_visibility=st.session_state.visibility,
@@ -125,15 +127,15 @@ Amount_input = st.number_input(
     #placeholder=st.session_state.placeholder,
     )
 
+# Convert input values to integers
 customer_input = int(customer_input)
 Amount_input = int(Amount_input)
 if not (customer_data.empty):
     st.text('Data have been loaded :) ')
 
-if (customer_input and Amount_input):
+if (customer_input and Amount_input): #If datainputs have been made in the app then make predictions
     data_load_state = st.text('Making Recommendation')
     product_names, product_colors, conf = make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input,state_dict)
 
     st.text(f'The {str(Amount_input)} recommended products are: {product_names}')
     st.text(f'The colour of these products will be: {product_colors}')
-    #st.text(f'with confidence {str(conf.numpy()*100)} %')
