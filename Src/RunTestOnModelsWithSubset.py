@@ -10,6 +10,7 @@ from Src.FMModel import FactorizationMachineModel
 import yaml
 from yaml.loader import SafeLoader
 np.random.seed(42)
+#Due to local constraints only 120000000 rows of the data is loaded
 test_df_negatives = pd.read_csv('Data/Preprocessed/test_with_negative_subset_part2.csv', nrows = 120000000)
 test_df_negatives = test_df_negatives[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
     'month', 'year', 'season', 'prod_name','graphical_appearance_name', 'colour_group_name', 'department_name',
@@ -21,7 +22,7 @@ with open('config/experiment/exp1.yaml') as f:
 
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
-
+#Initialize the correct model based on the config file
 if(hparams['model'] == 'DeepFM'):
     model = DeepFactorizationMachineModel(field_dims = test_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = hparams["device"])
 elif(hparams['model'] == 'MLP'):
@@ -60,6 +61,8 @@ c=294142.0
 #test_df_negatives = test_df_negatives[test_df_negatives['price']<number_uniques_dict['n_prices']]
 #test_df_negatives = test_df_negatives[test_df_negatives['prod_name']<number_uniques_dict['n_prod_names']]
 #test_df_negatives = test_df_negatives[test_df_negatives['department_name']<number_uniques_dict['n_departments']]
+
+## Calculate mAP(1) and mAP(12) for customers
 customers = test_df_negatives.customer_id.unique()
 correct_predicted_customer = []
 count_C = 0
@@ -72,7 +75,8 @@ for c in customers:
     test_df_negatives_temp = test_df_negatives[test_df_negatives["customer_id"]==c]
     test_df_negatives_temp = test_df_negatives_temp.drop(columns = ['target'])
     test_df_negatives_temp = test_df_negatives_temp.sample(frac = 1)
-    if(test_df_negatives_temp.shape[0] < 26000):
+    #Only caluclate for customers where every product is in subset
+    if(test_df_negatives_temp.shape[0] < 56000):
         continue
     elif(test_df_temp.empty):
         continue
@@ -83,12 +87,6 @@ for c in customers:
             correct_predicted_customer.append(c)
         else:
             accuracy = 0
-        #print(accuracy)
-        #products = test_df_negatives_temp[test_df_negatives_temp['article_id'].isin(items.numpy())][['prod_name']]
-        #items_decoded = Prod_Name_Encoder.inverse_transform(products['prod_name'].to_numpy().reshape(-1,1))
-        #print(items_decoded)
-        #true_products = test_df_negatives_temp[test_df_negatives_temp['article_id'].isin(true_values)]['prod_name'].unique()
-        #true_values_decoded = Prod_Name_Encoder.inverse_transform(true_products.reshape(-1,1))
         one_accuracy_all.append(accuracy)
         temp_accuracy = sum(items==i for i in true_values).bool()
         if(num_recommendations <= len(true_values)):

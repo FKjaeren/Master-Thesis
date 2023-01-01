@@ -4,7 +4,7 @@ import pandas as pd
 import tensorflow as tf
 #from Src.BaselineFactorizationModel import SimpleRecommender
 
-
+## Define dataset
 def get_dataset(df):
     dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
     article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)
@@ -33,6 +33,8 @@ test_sub = test_sub[test_sub["customer_id"].isin(customers)]
 
 customers = test_sub["customer_id"].unique()
 
+# Load model
+
 baseline_model = tf.keras.models.load_model('Models/test_baseline_model_with_tf_function2')
 dataset = get_dataset(test_sub)
 
@@ -40,7 +42,7 @@ k= 12
 
 
 
-
+#Loop for calculating mAP(1) and mAP(12)
 
 one_accuracy_all = []
 twelve_accuracy_all = []

@@ -8,6 +8,7 @@ import yaml
 from yaml.loader import SafeLoader
 import copy
 
+# Load data
 test_df_negatives = pd.read_csv('../../../../../../work3/s174478/Data/test_dataset_with_negative_part1.csv')
 test_df_negatives = test_df_negatives[['customer_id', 'article_id', 'price', 'sales_channel_id', 'day',
     'month', 'year', 'season', 'prod_name','graphical_appearance_name', 'colour_group_name', 'department_name',
@@ -25,7 +26,8 @@ twelve_accuracy_all = []
 
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
-#model = DeepFactorizationMachineModel(field_dims = test_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
+#load model
+model = DeepFactorizationMachineModel(field_dims = test_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = 'cpu')
 #model.load_state_dict(torch.load('Models/DeepFM_model_Final.pth'))
 PATH = hparams["model_path"]
 model = torch.load(PATH)
@@ -34,6 +36,7 @@ chunksize = 200000
 test_full_data_path = '../../../../../../work3/s174478/Data/test_dataset_with_negative_part1.csv'
 batch_size = 128
 count_C = 0
+#Calculate mAP(1) and mAP(12) for every customer
 for c in customers:
     #batch_size=test_df_negatives_temp.shape[0]
     temp_accuracy = []

@@ -6,7 +6,7 @@ import pickle
 import math
 from datetime import date
 random.seed(42)
-
+## Defintion of function for creating negative samples. There are multiple methods as described in the report. The first on is the one used for the training data.
 def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train', method = 'Random_choices', customer_id = None, article_df=None, customer_df = None, batch_size = None):
     if(method == 'Random_choices'):
         if(type_df == 'Train'):

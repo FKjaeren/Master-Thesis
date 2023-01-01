@@ -1,5 +1,6 @@
 import torch
 
+#Definition of function used to create recommendations as well as return the articles purchased by a customer.
 def Get_Recommendations(customer_id, model, test_set, test_full_set, num_recommendations =12):
     true_values = test_set.article_id.unique()
     test_tensor = torch.tensor(test_full_set.fillna(0).to_numpy(), dtype = torch.int)

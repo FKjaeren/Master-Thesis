@@ -20,12 +20,14 @@ def load_data(customer_id):
     data = data[data["customer_id"] == customer_id]
     return data
 
+# Get customer input written in the app.
 customer_input = st.number_input(
     "Enter a customer id 👇 such as: 299185",
     #label_visibility=st.session_state.visibility,
     #disabled=st.session_state.disabled,
     #placeholder=st.session_state.placeholder,
     )
+# Get amount of recommendations to be made written in the app
 Amount_input = st.number_input(
     "Enter amount of recommendations to be made 👇",
     #label_visibility=st.session_state.visibility,
@@ -38,7 +40,7 @@ Amount_input = int(Amount_input)
 
 data_load_state = st.text('Making Recommendation')
 
-
+# Load data
 customer_data = pd.read_csv('Data/Preprocessed/customer_df_numeric_subset.csv')
 article_data = pd.read_csv('Data/Preprocessed/article_df_numeric_subset.csv')
 article_data_raw = pd.read_csv('Data/Raw/articles_subset.csv')
@@ -53,8 +55,6 @@ batch_size = 128
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
 
-#idx, conf = Get_Recommendations(customer_input, model=model, test_set=data, test_full_set = full_data, test_full_data_path=None, chunksize=None, batch_size = 1, num_recommendations = Amount_input, iter_data = False)
-
 def make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, data):
     device = "cpu"
     model = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
@@ -68,27 +68,22 @@ def make_prediction(customer_data, article_data, train_df, article_data_raw, num
     outputs = outputs.detach()
     conf, idx = torch.topk(outputs, Amount_input)
 
+    #Decode the article ids
     non_encoders_ids = Article_Id_Encoder.inverse_transform(idx.reshape(-1,1))
     non_encoders_ids = non_encoders_ids.reshape(-1).astype(int)
 
 
 
-
+    # Find product names from the articles look table
     products = article_data_raw[article_data_raw['article_id'].isin(non_encoders_ids)]
 
     product_names = products['prod_name'].values
     product_colors = products['colour_group_name'].values
 
     return product_names, product_colors, conf
-
-#data_load_state.text(('The '+str(Amount_input)+' recommendations is product: '+str(idx.numpy()),'with confidence', str(conf.numpy()), '%'))
-#data_load_state.text()
+# Wait to make predictions until a customer id and amount of recommedations have been given from the user of the app
 if (customer_input and Amount_input):
     data_load_state = st.text('Making Recommendation')
     product_names, product_colors, conf = make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input, data)
 
     st.text(f'The {str(Amount_input)} recommendations is product: {product_names} in color: {product_colors}')
-    #st.text(f'with confidence {str(conf.numpy())}')
-
-#st.text(f'The {str(Amount_input)} recommendations is product: {str(idx.numpy())}')
-#st.text(f'with confidence {str(conf.numpy())} %')

@@ -33,6 +33,9 @@ prod_features= copy.deepcopy(features)
 customer_features = copy.deepcopy(features)
 customer_features.insert(0, customer)
 prod_features.insert(0, product)
+
+## Load data
+
 UniqueProducts_df = pd.read_csv('Data/Preprocessed/FinalProductDataFrameUniqueProducts_subset.csv')[prod_features]
 
 Customer_Preprocessed_data = pd.read_csv('Data/Preprocessed/FinalCustomerDataFrame_subset.csv')[customer_features]
@@ -43,6 +46,8 @@ if(Customer_Preprocessed_data.shape != Product_Preprocessed_data.shape):
 
 splitrange = round(0.8*len(Customer_Preprocessed_data['customer_id']))
 splitrange2 = round(0.975*len(Customer_Preprocessed_data['customer_id']))
+
+# Get the customers which have also been tested on for the other models
 
 test_customer = Customer_Preprocessed_data.iloc[splitrange2+1:]
 
@@ -58,7 +63,8 @@ test_product = test_product.loc[final_idx]
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
     number_uniques_dict = pickle.load(input_file)
 
-#Customer_data_tensor = torch.tensor(Only_Customer_data[['customer_id','price','age','colour_group_name','department_name']].to_numpy(), dtype = torch.int)
+## Convert data to tensor
+
 Product_data_tensor = torch.tensor(UniqueProducts_df.fillna(0).to_numpy(), dtype = torch.int)
 
 product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
@@ -66,16 +72,10 @@ product_dataset = CreateDataset(Product_data_tensor)#, features=['price','age','
 customer_test_tensor = torch.tensor(test_customer.fillna(0).to_numpy(), dtype = torch.int)
 product_test_tensor = torch.tensor(test_product.fillna(0).to_numpy(), dtype = torch.int)
 
-#product_test_dataset = CreateDataset(product_test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['article_id'])
-#customer_test_dataset = CreateDataset(customer_test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-
-#dataset_shapes = {'train_shape':product_train_tensor.shape,'valid_shape':product_valid_tensor.shape,'test_shape':product_test_tensor.shape}
-
-#product_test_loader = torch.utils.data.DataLoader(product_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
-#customer_test_loader = torch.utils.data.DataLoader(customer_test_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
-
 embedding_dim = 32
 device = "cpu"
+
+#Define model
 
 model = RecSysModel(product_dataset, embedding_dim=embedding_dim, batch_size=batch_size, n_unique_dict=number_uniques_dict, device=device, n_ages = 111)
 path = 'Models/Baseline_MulitDim_model.pth'
@@ -85,6 +85,8 @@ num_recommendations= 12
 
 one_accuracy_all = []
 twelve_accuracy_all = []
+
+#Calculate mAP(1) and mAP(12) for the 12000 customers defined as out testset
 
 for c in customers:
     temp_accuracy = []
