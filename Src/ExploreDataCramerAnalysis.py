@@ -51,6 +51,8 @@ articles_df = articles_df.drop(columns=["detail_desc"], axis=1)
 
 num_products = articles_df['article_id'].nunique()
 
+## find number of unique values in each feature.
+
 num_product_code = articles_df['product_code'].nunique()
 num_product_type_no = articles_df['product_type_no'].nunique()
 num_graphical_appearance_no = articles_df['graphical_appearance_no'].nunique()
