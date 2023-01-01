@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 import yaml
 from yaml.loader import SafeLoader
 
-
+# Get pytorch dataset
 class CreateDataset(Dataset):
         def __init__(self, dataset):#, features, idx_variable):
 
@@ -27,7 +27,7 @@ class CreateDataset(Dataset):
             shape_value = self.all_data.shape
             return shape_value
 
-
+# load data
 valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')[:20000]
 valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
 
@@ -37,7 +37,7 @@ valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_gr
 #valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
 
-
+# Datadrift default dataloader 
 class OurDataModule(pl.LightningDataModule):
     def __init__(self, dataset, parent=None, additional_transform=None):
         if parent is None:
@@ -85,128 +85,15 @@ class OurDataModule(pl.LightningDataModule):
         return torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler,
                                            collate_fn=self.collate_fn)
 
-""" 
-datamodule = OurDataModule(valid_dataset)
-#torch.utils.data.DataLoader(valid_dataset, batch_size=128, num_workers=1, shuffle=False)
-
-
-def corruption_function(x: torch.Tensor):
-    print(x.shape)
-    return abs((torch.randint(low=0,high=2, size =(x.shape[0], x.shape[1])).type(torch.int32)))
-
-
-ind_datamodule = datamodule
-ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_transform=corruption_function)
-
-#odd_datamodule = (ind_datamodule + torch.randn(ind_datamodule.shape[0], ind_datamodule.shape[1])).type(torch.int32)
-
-
-
-
-with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
-        number_uniques_dict = pickle.load(input_file)
-
-with open('config/experiment/exp1.yaml') as f:
-    hparams = yaml.load(f, Loader=SafeLoader)
-#batch_size = 128
-#embedding_dim = 38
-#dropout=0.4931
-device = 'cpu'
-#hparams = 
-path = 'Models/DeepFM_modelV2.pth'
-DeepFMModel = DeepFactorizationMachineModel(field_dims = valid_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
-#optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
-
-#model = DeepFactorizationMachineModel(field_dims = valid_df.columns, embed_dim=embedding_dim, n_unique_dict = number_uniques_dict, device = device, batch_size=batch_size,dropout=dropout)
-
-DeepFMModel.load_state_dict(torch.load(path))
-
-
-
-
-
-detector = torchdrift.detectors.ks.KSDriftDetector()
-
-
-
-# odd_input = (inputs + torch.randn(inputs.shape[0], inputs.shape[1])).type(torch.int32)
-
-#odd_dataset = CreateDataset(odd_input)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-
-
-#odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
-"""
-
-#odd_input = torchdrift.data.functional.gaussian_noise(inputs, severity= ) 
-
-"""
-feature_extractor = copy.deepcopy(DeepFMModel)
-
-class model(nn.Module):
-    def __init__(self, basemodel):
-        super().__init__()
-        self.basemodel = basemodel
-    def forward(self, x):
-        # vi vil have batch size og alt andet i dim 2
-        return self.basemodel(x).reshape(x.shape[0], -1)
-
-newmodel = model(feature_extractor.embedding)
-
-
-#torchdrift.utils.fit(datamodule.val_dataloader(), newmodel, detector)
-drift_detector = torchdrift.detectors.KernelMMDDriftDetector()
-
-
-od_model = drift_detector
-ind_datamodule = datamodule
-ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_transform=corruption_function)
-
-ood_ratio = 0.8
-sample_size = 10
-experiment = torchdrift.utils.DriftDetectionExperiment(od_model, newmodel, ood_ratio=ood_ratio, sample_size=sample_size)
-experiment.post_training(datamodule.val_dataloader())
-auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
-
-
-
-
-
-
-
-
-
-#x, y = next(iter(datamodule.val_dataloader()))
-ood_ratio = 0.8
-sample_size = 2
-experiment = torchdrift.utils.DriftDetectionExperiment(detector, newmodel, ood_ratio=ood_ratio, sample_size=sample_size)
-experiment.post_training(datamodule.val_dataloader())
-auc, (fp, tp) = experiment.evaluate(ind_datamodule, ood_datamodule)
-import matplotlib.pyplot as plt
-plt.plot(fp, tp)
-
-plt.show() """
-
-
 
 #################################################
 # new corruption function
 
 datamodule = OurDataModule(valid_dataset)
-#torch.utils.data.DataLoader(valid_dataset, batch_size=128, num_workers=1, shuffle=False)
-
-
+# Corrupt input data
 def corruption_function(x: torch.Tensor):
     print(x.shape)
     return x + abs((torch.randint(low=0,high=2, size =(x.shape[0], x.shape[1])).type(torch.int32)))
-
-
-
-ind_datamodule = datamodule
-ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_transform=corruption_function)
-
-#odd_datamodule = (ind_datamodule + torch.randn(ind_datamodule.shape[0], ind_datamodule.shape[1])).type(torch.int32)
-
-
 
 
 with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
@@ -215,53 +102,32 @@ with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input
 
 with open('config/experiment/exp1.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
-#batch_size = 128
-#embedding_dim = 38
-#dropout=0.4931
+
+
+# load model
 device = 'cpu'
-#hparams = 
 path = 'Models/DeepFM_modelV2.pth'
-#DeepFMModel = DeepFactorizationMachineModel(field_dims = valid_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
 
 DeepFMModel = torch.load(path)
 
-#DeepFMModel.load_state_dict(torch.load(path))
-
-
-
-
-detector = torchdrift.detectors.ks.KSDriftDetector()
-
-
-
-""" odd_input = (inputs + torch.randn(inputs.shape[0], inputs.shape[1])).type(torch.int32)
-
-odd_dataset = CreateDataset(odd_input)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
-
-
-odd_loader = torch.utils.data.DataLoader(odd_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
- """
-
-#odd_input = torchdrift.data.functional.gaussian_noise(inputs, severity= ) 
-
+# detector and feature extractor 
 
 feature_extractor = copy.deepcopy(DeepFMModel)
 
+# only take the relevant information from the model embeddings
 class model(nn.Module):
     def __init__(self, basemodel):
         super().__init__()
         self.basemodel = basemodel
     def forward(self, x):
-        # vi vil have batch size og alt andet i dim 2
+        # batch size and everything else in dim 2
         return self.basemodel(x).reshape(x.shape[0], -1)
 
 newmodel = model(feature_extractor.embedding)
 
-
-#torchdrift.utils.fit(datamodule.val_dataloader(), newmodel, detector)
 drift_detector = torchdrift.detectors.KernelMMDDriftDetector()
 
-
+# Make expperiment 
 od_model = drift_detector
 ind_datamodule = datamodule
 ood_datamodule = OurDataModule(valid_dataset, parent=datamodule, additional_transform=corruption_function)

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import numpy as np
 
+
+# Plots for correlation of runtime againts number embedding dimension
 embeddings = [21,97,55,43,75,98,115,11,24,35,110,9,99,25,63,116,113,96,99]
 runningtime = [119,359,195,165,249,350,377,88,121,165,387,85,349,122,214,378,375,478,676]
 

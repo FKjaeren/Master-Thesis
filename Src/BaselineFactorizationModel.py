@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+# Load data for lookup tables and split in training and validation
 df = pd.read_csv('Data/Raw/transactions_train_subset.csv')
 splitrange = round(0.8*len(df['customer_id']))
 splitrange2 = round(0.975*len(df['customer_id']))
@@ -19,13 +20,14 @@ articles_raw = pd.read_csv('Data/Raw/articles_subset.csv')
 articles_raw = articles_raw[['article_id']].values.flatten()
 customer_raw = customer_raw[['customer_id']].values.flatten()
 
-
+# Baseline model with two fetaures and how to find top k
 class SimpleRecommender(tf.keras.Model):
     def __init__(self, customers_sub, articles_sub, embedding_dim):
         super(SimpleRecommender, self).__init__()
         self.articles = tf.constant(articles_raw, dtype=tf.int32)
         self.customers = tf.constant(customer_raw, dtype=tf.string)
 
+        # Lookup tables for article id and customer id
         self.article_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.articles, range(len(articles_sub))),-1)
         self.customer_table = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(self.customers, range(len(customers_sub))),-1)
 
@@ -46,6 +48,7 @@ class SimpleRecommender(tf.keras.Model):
         article_embedding_values = self.articles_embed(article_embedding_index)
 
         return tf.squeeze(self.dot([customer_embbeding_values, article_embedding_values]),1)
+    # Get recommendatios for customers
     def _Customer_recommendation(self, customer, k):
         customer_x = self.customer_table.lookup(customer)
         customer_embeddings = tf.expand_dims(self.customer_embed(customer_x),0)
@@ -62,7 +65,7 @@ class SimpleRecommender(tf.keras.Model):
     def Customer_recommendation(self, customer, k):
         return self._Customer_recommendation(customer, k)
 
-
+# Mapper function which also makes negative samples with a one hot encoding
 class Mapper():
     def __init__(self, possible_articles, num_negative_articles):
         self.num_possible_articles = len(possible_articles)
@@ -75,7 +78,7 @@ class Mapper():
         candidates = tf.concat([article, negative_products], axis = 0)
         return (customer, candidates), self.y
 
-
+# Get dataset in batches
 def get_dataset(df, articles, number_negative_articles):
     dummy_customer_tensor = tf.constant(df[['customer_id']].values, dtype =tf.string)
     article_tensor = tf.constant(df[['article_id']].values,dtype=tf.int32)

@@ -3,6 +3,8 @@ import numpy as np
 from torch import nn
 import torch
 
+# The different layers used in DeepFM 
+
 class FeaturesEmbedding(torch.nn.Module):
     def __init__(self, embedding_dim, num_fields, n_unique_dict,device,n_ages=111):
         super().__init__()

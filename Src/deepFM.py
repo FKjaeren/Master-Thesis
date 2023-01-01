@@ -7,6 +7,7 @@ from torch import nn
 import pickle
 import copy
 from Src.Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
+# Iter data set
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
         self.chunksize = chunkSize
@@ -21,7 +22,7 @@ class DatasetIter(Dataset):
         inputs = tensorData[:,:-1]
         labels = tensorData[:,-1]
         return inputs, labels
-
+# Get pytorch dataset
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
         #tensorData = torch.tensor(Dataset.values, dtype=torch.int)
@@ -36,7 +37,7 @@ class CreateDataset(Dataset):
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-
+# The DeepFM model with both FM and MLP layers
 class DeepFactorizationMachineModel(torch.nn.Module):
     """
     A Pytorch implementation of DeepFM.
@@ -53,7 +54,7 @@ class DeepFactorizationMachineModel(torch.nn.Module):
         self.embed_output_dim = (len(field_dims)-1) * hparams["embed_dim"]
         self.mlp = MultiLayerPerceptron(self.embed_output_dim, mlp_dims, dropout=hparams["dropout"])
         self.hparams = hparams
-
+    # The same embeddings are used for all layers
     def forward(self, x):
 
         embed_x = self.embedding(x)

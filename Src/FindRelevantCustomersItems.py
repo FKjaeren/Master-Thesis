@@ -1,5 +1,7 @@
 import pandas as pd
 
+#script for filtering and only get the relevant data
+
 # Read data
 df = pd.read_csv('Data/Raw/transactions_train.csv')
 

@@ -3,6 +3,8 @@ import pandas as pd
 import pickle
 from CreateNegativeSamples import CreateNegativeSamples
 
+# Script for creating the enormous test data set with negative samples for each customer
+# The data has been split to make it possible to have in memory 
 
 test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')

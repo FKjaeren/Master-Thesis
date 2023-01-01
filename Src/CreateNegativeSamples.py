@@ -24,7 +24,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
                         item = random.choice(unique_train_articles)
                         interactions_list.append([c,item,0])
 
-
+            # Enriching negative samples
             map_season = {'Winter': 0, 'Spring':1, 'Summer': 2, 'Autumn': 3}
 
 
@@ -49,6 +49,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
             negative_df = negative_df.merge(temp, on = 'article_id', how = 'left')
             print('Negative samples were created for the train or validation dataframe, with the method "Random Choices"')
         elif(type_df == 'Test'):
+
             unique_train_customers = df.customer_id.unique()
             article_df = pd.read_csv('Data/Preprocessed/article_df_numeric_subset.csv')
             unique_train_articles = article_df.article_id.unique()
@@ -89,6 +90,7 @@ def CreateNegativeSamples(df, train_df, num_negative_samples, type_df = 'Train',
             print('Negative samples were created for the test dataframe, with the method "Random Choices"')
         else:
             print('Unreconized requested dataframe type, with the method "Random Choices"')
+    # BNS method TO do
     elif(method == 'Bayesian_sampling'):
         print('TODO du får nada')
     elif(method == 'OneCustomerNegSamples'):
