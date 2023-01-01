@@ -9,7 +9,7 @@ import copy
 from Src.Layers import FeaturesEmbedding, MultiLayerPerceptron
 import yaml
 from yaml.loader import SafeLoader
-
+# Iter data set and create data set
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
         self.chunksize = chunkSize
@@ -39,7 +39,7 @@ class CreateDataset(Dataset):
     def shape(self):
         shape_value = self.all_data.shape
         return shape_value
-
+# The MLP model
 class MultiLayerPerceptronArchitecture(torch.nn.Module):
     """
     A Pytorch implementation of DeepFM.

@@ -9,7 +9,6 @@ import copy
 from Layers import FactorizationMachine, FeaturesEmbedding, MultiLayerPerceptron, LinearLayer
 import logging
 import time
-# import pyyaml module
 import yaml
 from yaml.loader import SafeLoader
 from MLP_Model import MultiLayerPerceptronArchitecture
@@ -18,7 +17,7 @@ from MLP_Model import MultiLayerPerceptronArchitecture
 with open('config/experiment/Train_MLP.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 def main():
-
+    # Load and prepeare data
     class CreateDataset(Dataset):
         def __init__(self, dataset):#, features, idx_variable):
 
@@ -36,9 +35,7 @@ def main():
 
 
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset_50Neg.csv')
-    #train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset_50Neg.csv')
-    #valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -57,27 +54,23 @@ def main():
 
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
-
+    # Initialize model and weights
     DeepFMModel = MultiLayerPerceptronArchitecture(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(DeepFMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
         pos_weight = train_df.target.value_counts()[0] / train_df.target.value_counts()[1]
-        #neg_weight = train_df.target.value_counts()[1] / train_df.target.value_counts()[0]
     else:
         pos_weight = hparams["pow_weight"]
 
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
-    #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
 
     def init_weights(m):
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
-            #m.weight.data.fill_(0.0)
             m.bias.data.fill_(0.01)
         elif isinstance(m, nn.Embedding):
             m.weight.data.normal_(mean=0.0, std=1.0)
-            #m.weight.data.fill_(0.0)
             if m.padding_idx is not None:
                 m.weight.data[m.padding_idx].zero_()        
 
@@ -91,10 +84,9 @@ def main():
     Val_acc_list = []
     Train_Acc_list = []
     Best_loss = np.infty
+    # Train the model
     for epoch in range(1,num_epochs+1):
         start = time.time()
-
-        #print(epoch)
         running_loss = 0.
         running_loss_val = 0.
         epoch_loss = []
