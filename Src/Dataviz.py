@@ -1,4 +1,4 @@
-#%%
+
 import numpy as np 
 import pandas as pd
 
@@ -44,11 +44,13 @@ pivot1 = pivot1.sort_values("sold_count", ascending=False)
 
 ax = sns.barplot(x="sold_count", y="prod_name", data=pivot1)
 #plt.setp(ax.get_xticklabels(), rotation=90)
-ax.set_title("Top 20 most sold articles")
+ax.set_title("Top 15 most sold articles", fontsize=16)
+ax.tick_params(axis="both", which = "major", labelsize=14)
 """ 
 for var in ax.containers:
     ax.bar_label(var, fontsize=9) """
-plt.xlabel("Number of sold products")
+plt.xlabel("Number of sold articles", fontsize= 16)
+
 plt.ylabel("")
 plt.show()
 
@@ -60,11 +62,12 @@ pivot2 = pivot2.sort_values("sold_count", ascending=False)
 
 ax = sns.barplot(x="sold_count", y="department_name", data=pivot2.iloc[:10])
 #plt.setp(ax.get_xticklabels(), rotation=90)
-ax.set_title("Top 10 most popular departments")
+ax.set_title("Top 10 most popular departments", fontsize =16)
+ax.tick_params(axis="both", which = "major", labelsize=14)
 """ 
 for var in ax.containers:
     ax.bar_label(var, fontsize=9) """
-plt.xlabel("Number of sold products")
+plt.xlabel("Number of sold articles", fontsize = 16)
 plt.ylabel("")
 plt.show()
 
@@ -75,11 +78,12 @@ pivot3 = pivot3.sort_values("sold_count", ascending=False)
 
 ax = sns.barplot(x="sold_count", y="colour_group_name", data=pivot3)
 #plt.setp(ax.get_xticklabels(), rotation=90)
-ax.set_title("Top 10 most popular departments")
+ax.set_title("Top 5 most popular colours", fontsize= 16)
+ax.tick_params(axis="both", which = "major", labelsize=14)
 """ 
 for var in ax.containers:
     ax.bar_label(var, fontsize=9) """
-plt.xlabel("Number of sold products")
+plt.xlabel("Number of sold articles", fontsize = 16)
 plt.ylabel("")
 plt.show()
 
@@ -240,4 +244,3 @@ plt.show()
 
 
 
-# %%
