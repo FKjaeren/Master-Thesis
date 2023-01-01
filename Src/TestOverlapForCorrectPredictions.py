@@ -48,7 +48,7 @@ for customer in res_DeepFM:
 
 count_deep_overlap=0
 for customer in res_DeepFM:
-    if(customer in res_FM):
+    if(customer in res_FM or customer in res_MLP):
         count_deep_overlap+=1
 
 print(f"")

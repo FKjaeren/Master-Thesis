@@ -9,7 +9,7 @@ import copy
 from Layers import FactorizationMachine, FeaturesEmbedding, LinearLayer
 import yaml
 from yaml.loader import SafeLoader
-
+#First class is unuseed
 class DatasetIter(Dataset):
     def __init__(self, csv_path, chunkSize):
         self.chunksize = chunkSize
@@ -24,7 +24,7 @@ class DatasetIter(Dataset):
         inputs = tensorData[:,:-1]
         labels = tensorData[:,-1]
         return inputs, labels
-
+##Torch class Dataset initializer
 class CreateDataset(Dataset):
     def __init__(self, dataset):#, features, idx_variable):
         #tensorData = torch.tensor(Dataset.values, dtype=torch.int)
@@ -40,6 +40,7 @@ class CreateDataset(Dataset):
         shape_value = self.all_data.shape
         return shape_value
 
+## Definition of facotrization machine model
 class FactorizationMachineModel(torch.nn.Module):
     """
     A Pytorch implementation of DeepFM.

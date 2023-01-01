@@ -17,7 +17,7 @@ from FMModel import FactorizationMachineModel
 with open('config/experiment/train_FM.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 def main():
-
+    #Create dataset class
     class CreateDataset(Dataset):
         def __init__(self, dataset):#, features, idx_variable):
 
@@ -33,19 +33,17 @@ def main():
             shape_value = self.all_data.shape
             return shape_value
 
-
+    #Load data
     train_df = pd.read_csv('Data/Preprocessed/train_df_subset.csv')
-    #train_subset = train_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     valid_df = pd.read_csv('Data/Preprocessed/valid_df_subset.csv')
-    #valid_subset = valid_df.drop_duplicates(subset = ["customer_id","article_id","target"], keep="last")
     test_df = pd.read_csv('Data/Preprocessed/test_df_subset.csv')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    #Convert data to torch tensor
     train_tensor = torch.tensor(train_df.fillna(0).to_numpy(), dtype = torch.int)    
     valid_tensor = torch.tensor(valid_df.fillna(0).to_numpy(), dtype = torch.int)
     test_tensor = torch.tensor(test_df.fillna(0).to_numpy(), dtype = torch.int)
-
+    #Convert data to dataset class
     train_dataset = CreateDataset(train_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     valid_dataset = CreateDataset(valid_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
     test_dataset = CreateDataset(test_tensor)#, features=['price','age','colour_group_name','department_name'],idx_variable=['customer_id'])
@@ -54,7 +52,7 @@ def main():
 
     #dataset_shapes = {'train_shape':train_tensor.shape,'valid_shape':valid_tensor.shape,'test_shape':test_tensor.shape}
 
-
+    #Load data in batches
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
 
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size = batch_size, num_workers = 0, shuffle = True, drop_last = True)
@@ -63,7 +61,7 @@ def main():
 
     with open(r"Data/Preprocessed/number_uniques_dict_subset.pickle", "rb") as input_file:
         number_uniques_dict = pickle.load(input_file)
-
+    #Define model
     FMModel = FactorizationMachineModel(field_dims = train_df.columns, hparams=hparams, n_unique_dict = number_uniques_dict, device = device)
     optimizer = torch.optim.Adam(FMModel.parameters(), weight_decay=hparams["weight_decay"], lr = hparams["lr"])
     if hparams["pos_weight"] == "data_scale":
@@ -74,7 +72,7 @@ def main():
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     #loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight = torch.tensor(pos_weight))
     loss_fn_val = torch.nn.BCEWithLogitsLoss()
-
+    #Initialize weights
     def init_weights(m):
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
@@ -96,6 +94,7 @@ def main():
     Val_acc_list = []
     Train_Acc_list = []
     Best_loss = np.infty
+    #Train
     for epoch in range(1,num_epochs+1):
         start = time.time()
 
@@ -134,7 +133,7 @@ def main():
             #    print(' Train batch {} loss: {}'.format(batch, np.mean(epoch_loss)))
         if(epoch % 1 == 0):
             print(' Train epoch {} loss: {}'.format(epoch, np.mean(epoch_loss)))
-
+        #Find best performing model
         epoch_loss_value = np.mean(epoch_loss)
         Loss_list.append(epoch_loss_value)
         FMModel.eval()
