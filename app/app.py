@@ -17,10 +17,10 @@ with open('config/experiment/exp1.yaml') as f:
     hparams = yaml.load(f, Loader=SafeLoader)
 
 # Configuering some GCP configurations as well as loding the key, giving us access to the service accound, which has access to data and models.
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "masterthesis-366109-0c44ff859b6e.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "masterthesis-366109-f68ba577d009.json"
 PROJECT = "MasterThesis"
 REGION = "eu-west1"
-
+#masterthesis-366109-0c44ff859b6e.json
 storage_client = storage.Client()
 
 #@st.cache
@@ -133,7 +133,7 @@ Amount_input = int(Amount_input)
 if not (customer_data.empty):
     st.text('Data have been loaded :) ')
 
-if (customer_input and Amount_input): #If datainputs have been made in the app then make predictions
+if (customer_input and Amount_input): #If datainputs have been made in the app then make
     data_load_state = st.text('Making Recommendation')
     product_names, product_colors, conf = make_prediction(customer_data, article_data, train_df, article_data_raw, number_uniques_dict, Article_Id_Encoder, Amount_input, customer_input,state_dict)
 
