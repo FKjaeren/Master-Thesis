@@ -43,6 +43,10 @@ Src/Outputs/*
 # Ignore random filer:
 *.DS_Store
 *.pt.trace.json
+masterthesis-366109-0c44ff859b6e.json
+masterthesis-366109-eeac07888cf3.json
+masterthesis-366109-f68ba577d009.josn
+App/masterthesis-366109-f68ba577d009.josn
 
 # Ignore profilings:
 
